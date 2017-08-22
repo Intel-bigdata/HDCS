@@ -1,0 +1,75 @@
+From 3982731c93c784738267d60f173f6a6b2a7dcf4c Mon Sep 17 00:00:00 2001
+From: root <34433535@qq.com>
+Date: Mon, 14 Aug 2017 17:09:41 +0800
+Subject: [PATCH 9/9] data path
+
+---
+ src/AgentService.cpp |   16 ++++++----------
+ 1 files changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/src/AgentService.cpp b/src/AgentService.cpp
+index 3e6426b..72269ce 100644
+--- a/src/AgentService.cpp
++++ b/src/AgentService.cpp
+@@ -125,10 +125,7 @@ int AgentService::flush( CacheEntry** c_entry_list ){
+         }
+ 
+         CacheEntry* c_entry = c_entry_list_sort[i];
+-	int temp=do_flush( c_entry );
+-	if(temp<0){
+-	   ret--;// the amount of failure flush is "ret". 
+-	}
++	do_flush( c_entry );
+         completed_flush++;
+     }
+     tmp_sort.clear();
+@@ -142,7 +139,7 @@ int AgentService::flush_all(){
+     return flush_by_ratio(0);
+ }
+ 
+-int AgentService::do_evict( CacheEntry* c_entry,int &ret ){
++int AgentService::do_evict( CacheEntry* c_entry ){
+     WriteLock cache_entry_w_lock(c_entry->rwlock);
+     if( c_entry == NULL || c_entry->is_null() ){
+         return 0;
+@@ -153,14 +150,14 @@ int AgentService::do_evict( CacheEntry* c_entry,int &ret ){
+     uint64_t cache_id = c_entry->get_offset() / cct->object_size;
+     int temp=cct->metastore->remove( c_entry->get_name() );
+     if(temp<0){
+-	 ret--;
++         log_print("AgentService::do_evict fails, error code is : %d\n", temp);
+ 	 return -1;
+     }
+     //TODO: fix when racing with write/read
+     c_entry->reset();
+     temp=cct->cacher->_remove( cache_id );
+     if(temp<0){
+-	ret--;
++        log_print("AgentService::do_evict fails, error code is : %d\n", temp);
+ 	return -1;
+     }
+     cct->lru_clean->remove( (char*)c_entry );
+@@ -168,18 +165,17 @@ int AgentService::do_evict( CacheEntry* c_entry,int &ret ){
+ }
+ 
+ int AgentService::evict( CacheEntry** c_entry_list ){
+-    int ret;
+     log_print("AgentService::evict start\n");
+     uint64_t i = 0;
+     for(;c_entry_list[i]!=0; i++){
+         CacheEntry* c_entry = c_entry_list[i];
+-        threadpool->schedule(boost::bind(&AgentService::do_evict, this, c_entry, ret));
++        threadpool->schedule(boost::bind(&AgentService::do_evict, this, c_entry));
+     }
+     log_print("AgentService::evict waiting for %lu c_entry finish doing evict\n", i);
+     threadpool->wait();
+     
+     log_print("AgentService::evict complete\n");
+-    return ret;// failure counts for do_evict.
++    return 0;
+ }
+ 
+ int AgentService::flush_by_ratio( float target_ratio = 1.0 ){
+-- 
+1.7.1
+
