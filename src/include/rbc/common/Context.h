@@ -101,7 +101,7 @@ public:
             short port = stoi(config->configValues["messenger_port"]);
             server = new AsioListener( port, &request_queue );
             if( if_master ){
-                std::string target_ip = config->configValues["slave_ip"];;
+                std::string target_ip = config->configValues["slave_ip"];
                 std::string target_port = config->configValues["slave_messenger_port"];
                 client_for_slave = new AsioClient( target_ip, target_port ); 
                 // 3 replication
