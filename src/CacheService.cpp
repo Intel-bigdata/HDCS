@@ -181,7 +181,12 @@ int CacheService::do_write_op( Op *op ){
         Op* replica_op = new Op(cct, op->image_name, op->offset,
                             op->data, op->length, cct->mempool, op->req );
         C_AioReplicationCompletion *onfinish = new C_AioReplicationCompletion(replica_op);
-        replica_op->replica_aio_write((AioCompletion*)onfinish);
+        replica_op->replica_aio_write((AioCompletion*)onfinish,0);
+        // 3 replication
+        Op* replica_op_1 = new Op(cct, op->image_name, op->offset,
+                            op->data, op->length, cct->mempool, op->req );
+        C_AioReplicationCompletion *onfinish_1 = new C_AioReplicationCompletion(replica_op_1); 
+        replica_op_1->replica_aio_write((AioCompletion*)onfinish_1,1);
     }
 
     std::string oid_string = get_index( op->image_name, op->offset );

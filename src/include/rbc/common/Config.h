@@ -26,6 +26,7 @@ public:
     ConfigInfo configValues{
         {"master_ip",  "127.0.0.1"},
         {"slave_ip",  "192.168.5.11"},
+        //{"slave_ip_1", "192.168."},
         {"messenger_port",  "9090"},
         {"slave_messenger_port",  "9091"},
         {"enable_MemoryUsageTracker","false"},
