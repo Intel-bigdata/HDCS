@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -25,9 +26,13 @@ public:
     typedef std::map<std::string, std::string> ConfigInfo;
     ConfigInfo configValues{
         {"master_ip",  "127.0.0.1"},
-        {"slave_ip",  "192.168.5.11"},
         {"messenger_port",  "9090"},
-        {"slave_messenger_port",  "9091"},
+        {"replication_num", "3"},  // default amount of replication.          
+        /*
+        {"slave_ip",  "192.168.5.11"},
+        {"slave_ip_1", "192.168.5.12"},
+        {"slave_messenger_port_1","9091"},
+        */
         {"enable_MemoryUsageTracker","false"},
         {"cache_dir","/mnt/hyperstash_0/"},
         {"object_size","4096"},
@@ -42,6 +47,9 @@ public:
         {"cacheservice_threads_num","64"},
         {"log_to_file","false"}
     };
+    std::vector<std::string> slave_ip_vec;
+    std::vector<std::string> slave_port_vec;
+
     Config(std::string rbd_name){
 
         const std::string cfg_file = "/etc/rbc/general.conf";
@@ -56,6 +64,7 @@ public:
         }
 
         std::string s;
+        std::string k;
         for (ConfigInfo::const_iterator it = configValues.begin(); it!=configValues.end(); it++) {
             try {
                 s = pt.get<std::string>(rbd_name + "." + it->first);
@@ -78,6 +87,23 @@ public:
             }
             configValues[it->first] = s;
             s = "";
+        }
+
+        // accoding to replication_num, load ip and port of slave from config file.
+        int replica_num=std::stoi(configValues["replication_num"]);
+        std::cout<<"replica_num is "<<replica_num<<std::endl;
+        for( int i=0; i<replica_num; i++ ){
+            std::stringstream temp;
+            temp<<i;
+            try{
+                s = pt.get<std::string>( rbd_name + "." + "slave_ip[" + temp.str() + "]");
+                k = pt.get<std::string>( rbd_name + "." + "slave_messenger_port[" + temp.str() + "]");
+            }catch(...){
+                std::cout<<"when reading ip and port of slave, fails occur."<<std::endl;
+                assert(0);
+            }
+            slave_ip_vec.push_back(s);
+            slave_port_vec.push_back(k);
         }
         boost::property_tree::ini_parser::write_ini(cfg_file, pt);
 

@@ -80,9 +80,16 @@ public:
     int datastore_aio_write(){
         return 0;
     }
-    int replica_aio_write( AioCompletion *comp ){
+    int replica_aio_write( AioCompletion *comp , int replica_seq_id ){
         Msg* msg = new Msg( image_name.c_str(), offset, data, length, MSG_WRITE );
-        cct->client_for_slave->send_request(msg, (void*)comp);
+        (cct->asio_client_vec)[ replica_seq_id ]->send_request(msg, (void*)comp);
+        /*
+        if(replica_seq_id==0){
+            cct->client_for_slave->send_request(msg, (void*)comp);
+        }else if(replica_seq_id==1){
+            cct->client_for_slave_1->send_request(msg, (void*)comp);
+        }
+        */
     }
     ssize_t backstore_aio_read( C_AioBackendCompletion *onfinish ){
         while( cct->backend_aio_read_count > 256 ){
