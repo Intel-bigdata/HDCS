@@ -219,7 +219,7 @@ void AgentService::evict_by_ratio(){
 }
 
 void AgentService::_process_flush(){
-    while(cct->go){
+    while(cct->go && cct->working_mode == "cache"){
         sleep( cache_flush_interval );
         if(cct->go){
             flush_by_ratio();
@@ -231,7 +231,7 @@ void AgentService::_process_flush(){
 }
 
 void AgentService::_process_evict(){
-    while(cct->go){
+    while(cct->go && cct->working_mode == "cache"){
         sleep( cache_evict_interval );
             if(cct->go){
             evict_by_ratio();

@@ -40,6 +40,7 @@ public:
         {"cache_flush_queue_depth","64"},
         {"agent_threads_num","64"},
         {"cacheservice_threads_num","64"},
+        {"working_mode","cache"}, //cache, storage
         {"log_to_file","false"}
     };
     std::vector<std::string> slave_ip_vec;
