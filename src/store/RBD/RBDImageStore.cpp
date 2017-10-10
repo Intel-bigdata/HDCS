@@ -42,7 +42,7 @@ RBDImageStore::RBDImageStore(std::string pool_name,
     goto failed_shutdown;
   }
 
-  r = rbd_open(io_ctx, volume_name.c_str(), &image_ctx, NULL /*snap */ );
+  r = rbd_open_skip_cache(io_ctx, volume_name.c_str(), &image_ctx, NULL /*snap */ );
   if (r < 0) {
     log_err("rbd_open failed.\n");
     goto failed_open;

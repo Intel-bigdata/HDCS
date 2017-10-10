@@ -14,6 +14,13 @@ mkdir -p $DEPS_UT_LIB_DIR
 # CPP_Redis
 cd $DEPS_SRC_DIR
 ## Fetch the cppredis sources
+git clone https://github.com/intel-bigdata/hlkvds.git
+cd hlkvds; git checkout origin/master; make && make install
+
+
+# CPP_Redis
+cd $DEPS_SRC_DIR
+## Fetch the cppredis sources
 git clone https://github.com/zhouyuan/cpp_redis.git
 cd cpp_redis; git checkout origin/build_shared_lib; cmake .; make && make install
 
