@@ -9,7 +9,7 @@
 #include "Log.h"
 #include "rbc/Message.h"
 #include "rbc/CacheEntry.h"
-#include "rbc/SimpleBlockCacher.h"
+#include "rbc/BlockCacher.h"
 #include "rbc/MetaStore.h"
 #include "rbc/BackendStore.h"
 #include "rbc/common/Admin.h"
@@ -32,7 +32,7 @@ public:
     bool go;
     Config *config;
     WorkQueue<void*> request_queue;
-    SimpleBlockCacher *cacher;
+    BlockCacher *cacher;
     MetaStore *metastore;
     BackendStore *backendstore;
 
@@ -88,9 +88,10 @@ public:
         lru_clean = new LRU_LIST<char*>(mempool);
 
         admin = new Admin(lru_dirty, lru_clean, object_size);
-        cacher = new SimpleBlockCacher(config->configValues["cache_dir_dev"],
-                                       config->configValues["cache_dir_run"],
-                                       cache_total_size, object_size, mempool);
+
+        cacher = BlockCacher::create_cacher(config->configValues["datastore_type"],
+                                            config); //TODO(yuan): configuable
+
         metastore = new MetaStore(config->configValues["cache_dir_meta"]);
         log_print( "backendstore construction start\n");
         backendstore = new BackendStore("rbcclient");

@@ -26,7 +26,7 @@ all: $(DIST_LIB)
 
 HTTPHANDLER := include/rbc/HttpHandler/HttpRequestHandler.o 
     
-COMMON_OBJECTS:= CacheService.o CacheEntry.o MetaStore.o AgentService.o BackendStore.o SimpleBlockCacher.o
+COMMON_OBJECTS:= KVBlockCacher.o BlockCacher.o CacheService.o CacheEntry.o MetaStore.o AgentService.o BackendStore.o SimpleBlockCacher.o
 
 TEST_OBJECTS:= ../unittest/test_common/test_CacheMap.o ../unittest/test_common/test_AllocateMap.o ../unittest/test_common/test_WorkQueue.o ../unittest/test_common/test_MemoryUsageTracker.o
 

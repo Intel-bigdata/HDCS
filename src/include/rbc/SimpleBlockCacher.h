@@ -10,13 +10,15 @@
 #include <boost/unordered_map.hpp>
 #include <utility>
 
+#include "rbc/BlockCacher.h"
 #include "rbc/MetaStore.h"
 #include "rbc/common/Log.h"
 #include "rbc/common/Mempool.h"
 
 
 namespace rbc {
-class SimpleBlockCacher{
+
+class SimpleBlockCacher: public BlockCacher {
 public:
     typedef boost::unordered::unordered_map<uint64_t, std::pair<uint64_t, std::time_t>> BLOCK_INDEX;
     //typedef boost::unordered::unordered_map<uint64_t, uint64_t> BLOCK_INDEX;
