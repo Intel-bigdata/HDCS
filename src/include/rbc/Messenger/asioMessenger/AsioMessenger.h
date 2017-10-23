@@ -15,24 +15,25 @@ private:
     tcp::resolver resolver;
     tcp::socket* socket_;
     bool if_server;
-
     bool connected;
     char msg_header[MSG_HEADER_LEN];
-
     asio_callback_t handle_cb;
     void* handle_arg;
 public:
     AsioMessenger(boost::asio::io_service& io_service, void* accepted_socket, const char* host = NULL, const char* port = NULL):connected(false), resolver(io_service),handle_cb(NULL),handle_arg(NULL){
-        if(accepted_socket){
+        if(accepted_socket){ // for AsioListen
+            if_server=true;
             socket_ = (tcp::socket*)accepted_socket;
             socket_->set_option( boost::asio::ip::tcp::no_delay( true ) );
             start_receive();
         }else{
+            if_server=false;
             socket_ = new tcp::socket( io_service );
             tcp::resolver::query query( host, port );
             tcp::endpoint endpoint = *resolver.resolve(query);
             socket_->connect(endpoint);
             socket_->set_option( boost::asio::ip::tcp::no_delay( true ) );
+            std::cout<<"Asioclient::connection success"<<std::endl;
         }
     }
 
@@ -109,7 +110,11 @@ public:
             }
         }else{
             if( error == boost::asio::error::eof ){
-                log_print("AsioMessenger::handle_receive Socket closed by peer\n");
+                if(if_server){
+                    log_print("asiolisten::AsioMessenger::handle_receive Socket closed by peer\n");
+                }else{
+                    log_print("asioclient::AsioMessenger::handle_receive Socket closed by peer\n");
+                }
             }else{
                 log_print("AsioMessenger::handle_receive failed, error:%s \n", error.message().c_str());
             }
@@ -131,7 +136,7 @@ public:
         }
         return ret;
     }
-    
+
     int start_send( const char* data_, ssize_t length ){
         ssize_t offset = 0;
         ssize_t exact_send_bytes = 0;
@@ -152,6 +157,18 @@ public:
         return 0;
     }
 
+/*
+    int start_send(const char* data_, ssize_t length){
+        boost::asio::async_write(*socket_, boost::asio::buffer(data_, length),
+            [this](
+                 const boost::system::error_code& err, size_t cb) {
+             if (err) {
+                 assert(0);
+             }
+         });
+       return 0;
+    }
+*/
     int start_send(std::string data){
         return start_send( data.c_str(), data.length() );
     }

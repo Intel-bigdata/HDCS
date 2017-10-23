@@ -24,14 +24,15 @@ public:
     WorkQueue<void*>* request_queue;
 
 public:
-    AsioSession(boost::asio::io_service& io_service, void* tcp_socket, WorkQueue<void*>* request_queue = NULL, const char* host = NULL, const char* port = NULL):request_queue(request_queue){
+    AsioSession(boost::asio::io_service& io_service, void* tcp_socket, WorkQueue<void*>* request_queue = NULL, const char* host = NULL, const char* port = NULL):
+        request_queue(request_queue){
         go = true;
-        asio_messenger = new AsioMessenger(io_service, tcp_socket, host, port);
+        asio_messenger = new AsioMessenger(io_service, tcp_socket, host, port); // for AsioListen, tcp_socket != NULL
         asio_messenger->set_callback( handle_msg, (void*)this );
-        //if(tcp_socket) asio_messenger->set_to_connected();
     }
 
     ~AsioSession(){
+        std::cout<<"******asiosession will be delete ********"<<std::endl;
         go = false;
         delete asio_messenger;
     }
@@ -61,8 +62,8 @@ public:
             }            
             AioCompletion* comp = (AioCompletion*)io_u->comp;
             comp->complete(r);
-            delete msg;
-            delete io_u->msg;
+            delete msg; // this msg
+            delete io_u->msg; // last msg
             delete io_u;
         }
     }
