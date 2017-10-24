@@ -1,5 +1,5 @@
 // Copyright [2017] <Intel>
-#include "include/libhdcs.h"
+#include "include/libhdcs.hpp"
 #include "common/C_AioRequestCompletion.h"
 #include "common/Request.h"
 #include "core/HDCSCore.h"
@@ -17,8 +17,8 @@ int hdcs_aio_create_completion(void *cb_arg, callback_t complete_cb, hdcs_comple
   return 0;
 }
 
-libhdcs::libhdcs() {
-  hdcs_inst = new core::HDCSCore();
+libhdcs::libhdcs(char* name) {
+  hdcs_inst = new core::HDCSCore(name);
 }
 
 libhdcs::~libhdcs() {

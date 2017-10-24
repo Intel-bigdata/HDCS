@@ -7,7 +7,7 @@ OPTIMIZATION?=-O2 -Wno-unused-result
 OPT=$(OPTIMIZATION)
 CXXFLAGS=-std=c++11 ${OPT} -fPIC -g -D__STDC_FORMAT_MACROS -DLIBRBC_VERSION='"${LIBRBC_VERSION}"'
 CCFLAGS=${OPT} -fPIC -g -D__STDC_FORMAT_MACROS -DLIBRBC_VERSION='"${LIBRBC_VERSION}"'
-PLATFORM_LDFLAGS=-lboost_thread -lboost_system -lpthread -lrbd -lrados
+PLATFORM_LDFLAGS=-lpthread -lrbd -lrados
 INCS=-I./
 
 DIST_LIB = lib/libhdcs.so
@@ -50,7 +50,7 @@ $(TEST_TOOL):
 	${CXX} ${CXXFLAGS} ${INCS} test.c -o $@ $^ -Llib -lhdcs
 
 clean:
-	rm -rf common/*.o core/*.o store/SimpleStore/*.o store/RBD/*.o core/policy/*.o lib/libhdcs.so hdcs_test_tool
+	rm -rf common/*.o core/*.o store/SimpleStore/*.o store/RBD/*.o core/policy/*.o *.oo lib/libhdcs.so hdcs_test_tool
 	rm -rf /usr/local/include/hdcs
 	rm -rf /usr/local/lib/libhdcs.so
 

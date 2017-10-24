@@ -31,7 +31,7 @@ public:
     void complete(ssize_t r){
       ret = r;
       if (complete_cb) {
-        complete_cb((void*)this, complete_arg);
+        complete_cb(ret, complete_arg);
       }
       completed = true;
       m_cond.notify_all();
