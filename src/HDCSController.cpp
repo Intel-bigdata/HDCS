@@ -12,9 +12,12 @@ HDCSController::HDCSController(std::string name, std::string config_name): confi
 	  if(log_fd==NULL){}
     if(-1==dup2(fileno(log_fd), STDERR_FILENO)){}
   }
-  network_service = new server(16, "0.0.0.0", config->configValues["local_port"]);
+  //network_service = new networking::server(64, "0.0.0.0", "9000");
+  // param 3: session number  
+  // param 4: thread number of one session.
+  network_service = new networking::server("0.0.0.0", config->configValues["local_port"], 5, 5);
   network_service->start([&](void* p, std::string s){handle_request(p, s);});
-  network_service->wait();
+  network_service->run();
 }
 
 HDCSController::~HDCSController() {
@@ -47,7 +50,7 @@ void HDCSController::handle_request(void* session_id, std::string msg_content) {
       io_ctx->type = HDCS_CONNECT_REPLY;
       io_ctx->hdcs_inst = (void*)hdcs_inst;
       io_ctx->length = 0;
-      network_service->send(session_id, std::move(std::string((char*)io_ctx, io_ctx->size())));
+      network_service->send(session_id, std::move(std::string((char*)io_ctx, io_ctx->size()))); 
       break;
     }
     case HDCS_READ:
@@ -79,7 +82,6 @@ void HDCSController::handle_request(void* session_id, std::string msg_content) {
       break;
     case HDCS_WRITE:
     {
-      //printf("[BEGIN]HDCS WRITE REQ: %lu - %lu\n", io_ctx->offset, (io_ctx->offset + io_ctx->length));
       hdcs_inst = (core::HDCSCore*)io_ctx->hdcs_inst; 
       void* cli_comp = io_ctx->comp;
       char* aligned_data;
@@ -91,8 +93,9 @@ void HDCSController::handle_request(void* session_id, std::string msg_content) {
         network_service->send(session_id, std::move(std::string(msg_content.data(), msg_content.size())));
         free(aligned_data);
       });
-      std::lock_guard<std::mutex> lock(hdcs_inst->core_lock);
-      hdcs_inst->aio_write(aligned_data, io_ctx->offset, io_ctx->length, comp);
+      //std::lock_guard<std::mutex> lock(hdcs_inst->core_lock);
+      comp->complete(0);
+      //hdcs_inst->aio_write(aligned_data, io_ctx->offset, io_ctx->length, comp);
       //printf("[SUBMIT]HDCS WRITE REQ: %lu - %lu\n", io_ctx->offset, (io_ctx->offset + io_ctx->length));
     }
       break;

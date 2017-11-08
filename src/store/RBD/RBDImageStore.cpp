@@ -18,6 +18,7 @@ RBDImageStore::RBDImageStore(std::string pool_name,
                   volume_name(volume_name),
                   block_size(block_size) {
   int r;
+  return;
   r = rados_create(&cluster, "hdcs");
   if (r < 0) {
     log_err("rados_create failed.\n");
@@ -47,6 +48,7 @@ RBDImageStore::RBDImageStore(std::string pool_name,
     log_err("rbd_open failed.\n");
     goto failed_open;
   }
+  std::cout<<"rbd_open success"<<std::endl;
   return;
 
 failed_open:
@@ -71,6 +73,7 @@ RBDImageStore::~RBDImageStore() {
 }
 
 int RBDImageStore::write(char* data, uint64_t offset, uint64_t size) {
+  return 0;
   int r = rbd_write(image_ctx, offset, size, data);
   if (r < 0) {
     log_err("rbd_write failed.\n");
@@ -79,6 +82,7 @@ int RBDImageStore::write(char* data, uint64_t offset, uint64_t size) {
 }
 
 int RBDImageStore::read(char* data, uint64_t offset, uint64_t size) {
+return 0;
   int r = rbd_read(image_ctx, offset, size, data);
   if (r < 0) {
     log_err("rbd_write failed.\n");
@@ -89,6 +93,7 @@ int RBDImageStore::read(char* data, uint64_t offset, uint64_t size) {
 int RBDImageStore::aio_write(char* data, uint64_t offset, uint64_t size, AioCompletion* on_finish) {
   rbd_completion_t comp;
   int r = rbd_aio_create_completion(on_finish, rbd_finish_aiocb, &comp);
+return 0;
   r = rbd_aio_write(image_ctx, offset, size, data, comp);
   if (r < 0) {
     log_err("queue rbd_aio_write failed.\n");
@@ -99,6 +104,7 @@ int RBDImageStore::aio_write(char* data, uint64_t offset, uint64_t size, AioComp
 int RBDImageStore::aio_read(char* data, uint64_t offset, uint64_t size, AioCompletion* on_finish) {
   rbd_completion_t comp;
   int r = rbd_aio_create_completion(on_finish, rbd_finish_aiocb, &comp);
+return 0;
   r = rbd_aio_read(image_ctx, offset, size, data, comp);
   if (r < 0) {
     log_err("queue rbd_aio_write failed.\n");
@@ -107,6 +113,7 @@ int RBDImageStore::aio_read(char* data, uint64_t offset, uint64_t size, AioCompl
 }
 
 int RBDImageStore::block_write(uint64_t block_id, char* data) {
+return 0;
   int r = rbd_write(image_ctx, block_id * block_size, block_size, data);
   if (r < 0) {
     log_err("rbd_write failed.\n");
@@ -115,6 +122,7 @@ int RBDImageStore::block_write(uint64_t block_id, char* data) {
 }
 
 int RBDImageStore::block_read(uint64_t block_id, char* data) {
+return 0;
   int r = rbd_read(image_ctx, block_id * block_size, block_size, data);
   if (r < 0) {
     log_err("rbd_write failed.\n");
@@ -125,6 +133,7 @@ int RBDImageStore::block_read(uint64_t block_id, char* data) {
 int RBDImageStore::block_aio_write(uint64_t block_id, char* data, AioCompletion* on_finish) {
   rbd_completion_t comp;
   int r = rbd_aio_create_completion(on_finish, rbd_finish_aiocb, &comp);
+return 0;
   r = rbd_aio_write(image_ctx, block_id * block_size, block_size, data, comp);
   if (r < 0) {
     log_err("queue rbd_aio_write failed.\n");
@@ -135,6 +144,7 @@ int RBDImageStore::block_aio_write(uint64_t block_id, char* data, AioCompletion*
 int RBDImageStore::block_aio_read(uint64_t block_id, char* data, AioCompletion* on_finish) {
   rbd_completion_t comp;
   int r = rbd_aio_create_completion(on_finish, rbd_finish_aiocb, &comp);
+return 0;
   r = rbd_aio_read(image_ctx, block_id * block_size, block_size, data, comp);
   if (r < 0) {
     log_err("queue rbd_aio_read failed.\n");

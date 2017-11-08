@@ -45,6 +45,7 @@ public:
         boost::property_tree::ptree pt;
         try {
             boost::property_tree::ini_parser::read_ini(cfg_file, pt);
+            std::cout<<"success"<<std::endl;
         } catch(...) {
             std::cout << "error when reading: " << cfg_file
                       << ", config file for missing?" << std::endl;
