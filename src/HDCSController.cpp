@@ -12,9 +12,9 @@ HDCSController::HDCSController(std::string name, std::string config_name): confi
 	  if(log_fd==NULL){}
     if(-1==dup2(fileno(log_fd), STDERR_FILENO)){}
   }
-  network_service = new server(16, "0.0.0.0", config->configValues["local_port"]);
+  network_service = new networking::server("0.0.0.0", config->configValues["local_port"], 5, 5);
   network_service->start([&](void* p, std::string s){handle_request(p, s);});
-  network_service->wait();
+  network_service->run();
 }
 
 HDCSController::~HDCSController() {
