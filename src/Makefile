@@ -5,7 +5,7 @@ CXX=g++
 PLATFORM=OS_LINUX
 OPTIMIZATION?=-O2 -Wno-unused-result
 OPT=$(OPTIMIZATION)
-CXXFLAGS=-std=c++14 ${OPT} -fPIC -g -D__STDC_FORMAT_MACROS -DLIBRBC_VERSION='"${LIBRBC_VERSION}"'
+CXXFLAGS=-std=c++1y ${OPT} -fPIC -g -D__STDC_FORMAT_MACROS -DLIBRBC_VERSION='"${LIBRBC_VERSION}"'
 CCFLAGS=${OPT} -fPIC -g -D__STDC_FORMAT_MACROS -DLIBRBC_VERSION='"${LIBRBC_VERSION}"'
 PLATFORM_LDFLAGS=-lboost_thread -lboost_system -lpthread -lrbd -lrados
 INCS=-I./
@@ -28,7 +28,7 @@ COMMON_OBJECTS:= store/SimpleStore/SimpleBlockStore.o
 
 RBD_OBJECTS:= store/RBD/RBDImageStore.o 
 
-NETWORK_OBJECTS:= Network/io_pool.o
+#NETWORK_OBJECTS:= Network/io_pool.o
 
 HDCSCore_cache.oo : core/HDCSCore.cpp
 	${CXX} -c ${CXXFLAGS} -DCACHE_POLICY ${INCS} $< -o $@
@@ -59,7 +59,8 @@ $(DIST_LIB): core/policy/TierPolicy.o $(COMMON_OBJECTS) $(RBD_OBJECTS) $(TIER_CO
 endif
 
 ifeq ($(POLICY), ALL)
-$(CONTROLLER): core/policy/CachePolicy.o core/policy/TierPolicy.o $(COMMON_OBJECTS) $(RBD_OBJECTS) $(NETWORK_OBJECTS)
+#$(CONTROLLER): core/policy/CachePolicy.o core/policy/TierPolicy.o $(COMMON_OBJECTS) $(RBD_OBJECTS) $(NETWORK_OBJECTS)
+$(CONTROLLER): core/policy/CachePolicy.o core/policy/TierPolicy.o $(COMMON_OBJECTS) $(RBD_OBJECTS) 
 	${CXX} ${CXXFLAGS} ${INCS} -DCACHE_POLICY -DTIER_POLICY  core/HDCSCore.cpp HDCSController.cpp HDCS.cpp -o $@ $^ ${PLATFORM_LDFLAGS}
 endif
 

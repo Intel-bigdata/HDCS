@@ -27,7 +27,9 @@ ssize_t hdcs_aio_get_return_value(hdcs_completion_t c) {
 int hdcs_open(void** io, char* name) {
   *io = malloc(sizeof(hdcs_ioctx_t));
   hdcs_ioctx_t* io_ctx = (hdcs_ioctx_t*)*io;
-  io_ctx->conn = new Connection([](void* p, std::string s){client::request_handler(p, s);});
+  // param 2 : session numer
+  // param 3: threads number at one session
+  io_ctx->conn = new hdcs::networking::Connection([](void* p, std::string s){client::request_handler(p, s);}, 5, 5);
 
   hdcs::HDCS_REQUEST_CTX msg_content(HDCS_CONNECT, nullptr, nullptr, 0, strlen(name), name);
   io_ctx->conn->connect("127.0.0.1", "9000");
