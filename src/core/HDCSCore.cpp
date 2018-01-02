@@ -205,6 +205,7 @@ void HDCSCore::connect_to_replica (std::string name) {
     if (c == ',') last_pos = 2;
     else last_pos = 1;
     port = addr_port_str.substr(colon_pos + 1, addr_port_str.length() - colon_pos - last_pos);
+    addr_port_str = addr_port_str.sub_str(0, addr_port_str.length() - colon_pos - last_pos);
     std::cout << "Connect to replication_node: " << addr << " : " << port << std::endl;
 
     io_ctx = (hdcs_ioctx_t*)malloc(sizeof(hdcs_ioctx_t));

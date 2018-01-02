@@ -22,6 +22,9 @@ public:
   }
   void complete(ssize_t r) {
     if (defined) {
+      if (shared_count == -1) {
+        Callback(r);
+      }
       if (--shared_count == 0) {
         Callback(r);
         cond.notify_all();

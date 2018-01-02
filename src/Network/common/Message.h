@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sstream>
+#include <iostream>
 
 /* 
  * 1: crc_byte_num need to be multiple of 8
