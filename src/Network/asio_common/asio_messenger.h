@@ -16,38 +16,13 @@
 #include "../io_service/thread_group.h"
 #include "../common/wait_event.h"
 #include "../common/counter.h"
+#include "../common/session_arg.h"
 //#include "asio_session.h"
 
 namespace hdcs{
 namespace networking{
+
 using boost::asio::ip::tcp;
-
-class SessionArg{
-public:
-    SessionArg(const void* s_id, uint64_t _seq)
-        :session_id(s_id),seq_id(_seq)
-    {}
-    SessionArg(const void* s_id)
-        :session_id(s_id)
-    {}
-    ~SessionArg(){}
-
-    void set_seq_id(uint64_t _seq_id){
-        seq_id = _seq_id;
-    }
-
-    uint64_t get_seq_id(){
-        return seq_id;
-    }
-
-    const void* get_session_id(){
-        return session_id;
-    }        
-
-private:
-    const void* session_id;
-    uint64_t seq_id;
-};
 
 class asio_messenger{
 private:
@@ -406,9 +381,9 @@ public:
 
 private:
 
-   // will unitfy to encode error, then using switch.
+   // will unify to encode error, then using switch.
    // TODO
-   void error_handing(const std::string fail_reason, const boost::system::error_code& err){
+   void error_handing(const std::string error_reason, const boost::system::error_code& err){
        if(err == boost::asio::error::eof){
           close();
           return;
@@ -417,13 +392,13 @@ private:
            if(send_index == receive_index){
                // TODO
            }else{
-               std::cout<<fail_reason<<" : "<<err.message()<<std::endl;
+               std::cout<<error_reason<<" : "<<err.message()<<std::endl;
            }
            close();
            return;
        }
        // other error just close socket.
-       std::cout<<fail_reason<<" : "<<err.message()<<std::endl;
+       std::cout<<error_reason<<" : "<<err.message()<<std::endl;
        close();
        return;
    }

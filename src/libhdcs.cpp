@@ -65,13 +65,14 @@ extern "C" int hdcs_open(void** io, char* name) {
   *io = malloc(sizeof(hdcs_ioctx_t));
   hdcs_ioctx_t* io_ctx = (hdcs_ioctx_t*)*io;
   //io_ctx->conn = new Connection([](void* p, std::string s){client::request_handler(p, s);});
-  io_ctx->conn = new hdcs::networking::Connection([](void* p, std::string s){request_handler(p, s);}, 16, 5);
+  io_ctx->conn = new hdcs::networking::Connection([](void* p, std::string s){request_handler(p, s);}, 1, 5);
 
   hdcs::HDCS_REQUEST_CTX msg_content(HDCS_CONNECT, nullptr, nullptr, 0, strlen(name), name);
   io_ctx->conn->connect("127.0.0.1", "9000");
   io_ctx->conn->set_session_arg(*io);
 
   io_ctx->conn->communicate(std::move(std::string(msg_content.data(), msg_content.size())));
+  sleep(1);
   return 0;
 }
 

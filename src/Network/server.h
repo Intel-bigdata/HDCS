@@ -6,8 +6,10 @@
 #include <vector>
 #include <thread>
 #include <atomic>
-#include "./common/session.h"
-#include "./common/networking_common.h"
+
+#include "common/session.h"
+#include "common/networking_common.h"
+#include "common/option.h"
 #include "acceptor.h"
 
 namespace hdcs{
@@ -24,6 +26,7 @@ public:
     server(std::string _ip_address, std::string _port_num, int s_num=10, int thd_num=10): 
         is_stop(false){
         acceptor_ptr.reset(new Acceptor( _ip_address, _port_num, session_set , s_num, thd_num));
+        //std::cout<<"server construction success.."<<std::endl;
     }
 
     ~server(){
@@ -52,6 +55,7 @@ public:
 
     // start listen 
     bool start( ProcessMsg process_msg ){
+        //std::cout<<"server::start, begin..."<<std::endl;
         acceptor_ptr->start( process_msg );
     }
 
@@ -61,12 +65,24 @@ public:
     }
 
     void async_send(void* session_arg, std::string& send_buffer ){
+        ///////
+        /*
+        std::cout<<"server::async_send: session is is "<<session_arg<<std::endl;
+        std::cout<<"sessionset have the following elements: "<<std::endl;
+        for(auto it=session_set.begin(); it!=session_set.end(); it++){
+            std::cout<<"session id is "<<*it<<std::endl;
+        }
+        //////////
         Session* temp_s_id = (Session*)(((SessionArg*)session_arg)->get_session_id());
+        std::cout<<"++++++"<<temp_s_id<<"++++++"<<std::endl;
         if(session_set.find(temp_s_id)==session_set.end()){
             std::cout<<"Networking::server: finding session_id failed. Maybe need to re-connction "<<std::endl;
-            assert(0);
+            //assert(0);
         }
-        temp_s_id->async_send(send_buffer, ((SessionArg*)session_arg)->get_seq_id());
+        */
+        // TODO TODO TODO TODO
+        //((Session*)session_arg)->async_send(send_buffer, ((SessionArg*)session_arg)->get_seq_id());
+        ((Session*)session_arg)->async_send(send_buffer, 0);
     }
 }; 
 }

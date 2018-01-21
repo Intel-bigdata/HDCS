@@ -32,12 +32,10 @@ public:
     }
 
     void handle_request(void* s_id, string receive_buffer){
-
+        //std::cout<<"hdcs_hanlde_request: msg is "<<receive_buffer<<std::endl;
         // produce 4k message content.
-        string xx("this is a test program : i'm server "); 
-        while(xx.size()<4096){
-            xx.push_back('x');
-        }
+
+        string xx("hello, i'm server......");
 
         echo_server->send((Session*)s_id, xx, NULL);
     }
@@ -46,29 +44,30 @@ private:
 };
 
 
-
-void test_for_stop_interface(string ip_address, string port, int s_num, int thd_num){
-    server server_test(ip_address, port, s_num, thd_num);
-    server_test.start([](void*p, string s){std::cout<<"--"<<std::endl;});
-    server_test.async_run();
-    std::cout<<"run 3s..."<<std::endl;
-    sleep(3);
-    server_test.stop();
-    cout<<"testing stop interface:  over"<<endl;
-}
-
 int main(){
 
     int session_num = 10; // one session for one io_service
     int thd_num_of_one_ios = 20;
     uint64_t run_time = 100000;
 
-    string ip_address("0.0.0.0");
-    string port_num("7777");
-    //test_class test(ip_address, port_num, session_num, thd_num_of_one_ios);
-    //test.sync_run();
-    //
-    test_for_stop_interface(ip_address, port_num, 1, 1);
+    string ip_address("127.0.0.1");
+    string port_num("6666");
+
+    test_class test(ip_address, port_num, session_num, thd_num_of_one_ios);
+    test.run();
+
+    /*
+    server echo_server("127.0.0.1", "6666", 1, 1);
+
+    echo_server.start( [](void* p, string s){ //
+        handle_request(p, s);
+        });
+
+
+    echo_server.sync_run();
+    */
+
+    //test_for_stop_interface(ip_address, port_num, 1, 1);
 
     return 0;
 } 

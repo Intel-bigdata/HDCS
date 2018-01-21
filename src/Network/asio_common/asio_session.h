@@ -80,10 +80,6 @@ public:
         return ((now - last_active).total_milliseconds() > SESSION_TIMEOUT)?true:false;
     }
 
-    boost::asio::ip::tcp::socket& get_stream(){
-        return m_messenger->get_socket();
-    }
-
     // called by client
     ssize_t communicate(std::string send_buffer, uint64_t _seq_id){
         return m_messenger->communicate(send_buffer, _seq_id);
@@ -92,6 +88,14 @@ public:
     // called by client
     void aio_communicate(std::string& send_buffer, uint64_t _seq_id){
         m_messenger->aio_communicate(send_buffer, _seq_id);
+    }
+
+    boost::asio::ip::tcp::socket& get_stream(){
+        return m_messenger->get_socket();
+    }
+
+    COMMUNICATION_TYPE communication_type(){
+        return COMMUNICATION_TYPE(0);
     }
     
 };

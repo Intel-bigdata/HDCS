@@ -90,7 +90,8 @@ public:
 private:
 
     void async_accept() {
-        SessionPtr new_session_ptr = new asio_session(_io_service_pool.get_io_service(), 1); // create new session.
+        //SessionPtr new_session_ptr = new asio_session(_io_service_pool.get_io_service(), 1);
+        asio_session* new_session_ptr = new asio_session(_io_service_pool.get_io_service(), 1); // create new session.
         m_acceptor.async_accept(new_session_ptr->get_stream(), boost::bind(
                     &asio_acceptor::on_accept, this, new_session_ptr, _1));
     }
@@ -100,8 +101,6 @@ private:
         if (is_closed.load()){
             return;
         }
-        //std::cout<<"Networking: New session have been created, and session ID is: "<<new_session_ptr<<std::endl;
-
         if (ec){
             std::cout<< "start_listen(): async_acceptor failed: "<<ec.message()<<std::endl;
             stop();

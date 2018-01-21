@@ -1,5 +1,6 @@
 #ifndef CLIENT 
 #define CLIENT 
+
 #include <mutex>
 #include <string>
 #include <thread>
@@ -8,8 +9,10 @@
 #include <atomic>
 #include <memory>
 #include <atomic>
+
 #include "connect.h"
 #include "common/counter.h"
+#include "common/option.h"
 
 namespace hdcs{
 namespace networking{
@@ -58,11 +61,17 @@ public:
         }
     }
 */    
+    // TCP and rdma set hdcs_arg....TODO
     void set_session_arg(void* arg){
-        process_msg_arg = arg; 
-        for(int i = 0; i < session_vec.size(); ++i){
-            session_vec[i]->set_session_arg(arg);
-        }
+        //process_msg_arg = arg; 
+        //for(int i = 0; i < session_vec.size(); ++i){
+        //    session_vec[i]->set_session_arg(arg);
+        //}
+
+        // just for rdma
+
+        m_connect.set_hdcs_arg(arg);
+
     }
 
     int connect( std::string ip_address, std::string port){
@@ -103,8 +112,9 @@ public:
         if(++session_index==session_vec.size()){
             session_index = 0;
         }
-        session_index_lock.unlock();
+        //session_index_lock.unlock(); // TODO TODO TODO
         session_vec[temp_index]->aio_communicate( send_buffer, generate_sequence_id() );
+        session_index_lock.unlock();
     }
 
 private:

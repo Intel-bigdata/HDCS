@@ -1,16 +1,19 @@
 #ifndef CONNECT
 #define CONNECT
-#include "./asio_common/asio_session.h"
-#include "./io_service/io_service_pool.h"
+#include "asio_common/asio_connect.h"
+#include "rdma_common/rdma_connect.h"
 namespace hdcs{
 namespace networking{
 
 class Connect{
 public:
+    // TODO rmda and tcp use the same thread pool 
     Connect(int _ios_num, int _thd_num_of_one_ios)
-        : m_io_service_pool(_ios_num, _thd_num_of_one_ios)
+       : asio_connect(NULL)
+       , rdma_connect(NULL)
     {
-        m_io_service_pool.async_run();
+        asio_connect.reset(new AsioConnect(_ios_num, _thd_num_of_one_ios));
+        rdma_connect.reset( new RDMAConnect()); 
     }
 
     ~Connect(){
@@ -23,32 +26,27 @@ public:
     }
 
     void close(){
-        m_io_service_pool.stop();
+        asio_connect->close();
     }
 
     SessionPtr sync_connect(std::string ip_address, std::string port, ProcessMsgClient _process_msg){
-       if(true){
-           asio_session* new_session;
-           new_session = new asio_session(m_io_service_pool.get_io_service(), 0);
-           int ret;
-           ret = new_session->sync_connection(ip_address, port, _process_msg);
-           if(ret != 0){
-               std::cout<<"connect:: new_session->sync_connection failed."<<std::endl;
-               return NULL; // connect failed
-           }
-           return (Session*)new_session;
+       // use config file to selct tcp/rdma 
+       // tcp
+       if(false){
+           return asio_connect->sync_connect(ip_address, port, _process_msg);
        }else{
-           /*
-            rdma_session new_session = new rdma_session();
-            new_session->sync_connection();
-            new_session->sync_connect(ip_address, port);
-            return (Session*)new_session;
-           */
+           std::cout<<"connect: sync_connect"<<std::endl;
+           return rdma_connect->connect(ip_address, port, _process_msg);
        }
     }
-private:
 
-    io_service_pool m_io_service_pool;
+    //just for rdma
+    void set_hdcs_arg(void* arg){
+        rdma_connect->set_hdcs_arg(arg);
+    }
+private:
+    std::shared_ptr<AsioConnect> asio_connect;
+    std::shared_ptr<RDMAConnect> rdma_connect;
 };
 }
 }
