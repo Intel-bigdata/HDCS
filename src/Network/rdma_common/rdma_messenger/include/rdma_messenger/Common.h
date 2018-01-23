@@ -1,0 +1,7 @@
+// Copyright [2017] <Intel>
+
+#define RECV_QUEUE_SIZE_PER_QP 1024
+#define SEND_QUEUE_SIZE_PER_QP 1024
+#define QUEUE_BUFFER_SIZE 40960
+#define CQ_DEPTH 4096
+#define IO_WORKER_NUMS 10

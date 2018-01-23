@@ -19,9 +19,20 @@ HDCSController::HDCSController(struct hdcs_repl_options repl_opt, std::string co
   }
 
   //TODO(): seperate public/cluster network
-  network_service = new networking::server("0.0.0.0", _port, 16, 5);
-  network_service->start([&](void* p, std::string s){handle_request(p, s);});
-  //network_service->wait();
+
+  networking::ServerOptions server_options;
+  server_options._io_service_num = 3;
+  server_options._session_num = 3;
+  server_options._thd_num_on_one_session = 3;
+  server_options._process_msg = ([&](void* p, std::string s){handle_request(p, s);});
+  server_options._port_num_vec.push_back(_port);
+  server_options._communication_type_vec.push_back((networking::COMMUNICATION_TYPE)0); // TCP
+  //server_options._port_num_vec.push_back("7777");
+  //server_options._communication_type_vec.push_back((networking::COMMUNICATION_TYPE)1); //RDMA
+  network_service = new networking::server(server_options);
+
+  // TODO: combine two interfaces into one sync_run() interface...sdh
+  network_service->start();
   network_service->sync_run();
 }
 

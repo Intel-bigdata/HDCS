@@ -1,55 +1,95 @@
 #ifndef CONNECT
 #define CONNECT
-#include "./asio_common/asio_session.h"
-#include "./io_service/io_service_pool.h"
+
+#include "asio_common/asio_connect.h"
+#include "rdma_common/rdma_connect.h"
+#include "common/option.h"
+
 namespace hdcs{
 namespace networking{
 
 class Connect{
+private:
+    std::shared_ptr<AsioConnect> asio_connect_ptr;
+    std::shared_ptr<RDMAConnect> rdma_connect_ptr;
+    const ClientOptions& client_options;
+
 public:
-    Connect(int _ios_num, int _thd_num_of_one_ios)
-        : m_io_service_pool(_ios_num, _thd_num_of_one_ios)
+    // TODO rmda and tcp use the same thread pool 
+    Connect(const ClientOptions& _co)
+       : asio_connect_ptr(NULL)
+       , rdma_connect_ptr(NULL)
+       , client_options(_co) 
+    {}
+
+    ~Connect()
     {
-        m_io_service_pool.async_run();
-    }
-
-    ~Connect(){
         close();
+        asio_connect_ptr.reset();
+        rdma_connect_ptr.reset();
     }
 
-    int async_connect( std::string ip_address, std::string port ){
-        // TODO
+    void close()
+    {
+        if(asio_connect_ptr != NULL)
+        {
+            asio_connect_ptr->close();
+        }
+        if(rdma_connect_ptr != NULL)
+        {
+            rdma_connect_ptr->close();
+        }
+    }
+
+    int async_connect( std::string ip_address, std::string port , std::vector<Session*>& _session_vec, int type /* connection callback */)
+    {
+        if(false)
+        {
+            if(asio_connect_ptr == NULL)
+            {
+                asio_connect_ptr.reset(new AsioConnect(client_options, _session_vec));
+            }
+            // TODO
+            //asio_connect_ptr->async_connect(ip_address, port, connection_callback);
+        }
+        if(true)
+        {
+            if(rdma_connect_ptr == NULL)
+            {
+                //rdma_connect_ptr.reset(new RDMAConnect(client_options));
+            }
+            // TODO
+            //rdma_connect_ptr->async_connect(ip_address, port, connection_callback);
+        }
         return 1;
     }
 
-    void close(){
-        m_io_service_pool.stop();
+    int sync_connect(std::string ip_address, std::string port, std::vector<Session*>& _session_vec, int _type)
+    {
+        if(_type == 0)
+        {
+            if(asio_connect_ptr == NULL)
+            {
+                asio_connect_ptr.reset(new AsioConnect(client_options, _session_vec));
+            }
+            return asio_connect_ptr->sync_connect(ip_address, port);
+        }
+        if(_type == 1)
+        {
+            if(rdma_connect_ptr == NULL)
+            {
+                rdma_connect_ptr.reset(new RDMAConnect(client_options, _session_vec));
+            }
+            return rdma_connect_ptr->sync_connect(ip_address, port);
+        }
+        if(_type == 2)
+        {
+            // TODO local communication
+        }
     }
 
-    SessionPtr sync_connect(std::string ip_address, std::string port, ProcessMsgClient _process_msg){
-       if(true){
-           asio_session* new_session;
-           new_session = new asio_session(m_io_service_pool.get_io_service(), 0);
-           int ret;
-           ret = new_session->sync_connection(ip_address, port, _process_msg);
-           if(ret != 0){
-               std::cout<<"connect:: new_session->sync_connection failed."<<std::endl;
-               return NULL; // connect failed
-           }
-           return (Session*)new_session;
-       }else{
-           /*
-            rdma_session new_session = new rdma_session();
-            new_session->sync_connection();
-            new_session->sync_connect(ip_address, port);
-            return (Session*)new_session;
-           */
-       }
-    }
-private:
+}; //connect
 
-    io_service_pool m_io_service_pool;
-};
-}
-}
+}//namespace networking
+}//namespace hdcs
 #endif
