@@ -16,59 +16,31 @@
 #include "../io_service/thread_group.h"
 #include "../common/wait_event.h"
 #include "../common/counter.h"
+#include "../common/session_arg.h"
 //#include "asio_session.h"
 
 namespace hdcs{
 namespace networking{
+
 using boost::asio::ip::tcp;
-
-class SessionArg{
-public:
-    SessionArg(const void* s_id, uint64_t _seq)
-        :session_id(s_id),seq_id(_seq)
-    {}
-    SessionArg(const void* s_id)
-        :session_id(s_id)
-    {}
-    ~SessionArg(){}
-
-    void set_seq_id(uint64_t _seq_id){
-        seq_id = _seq_id;
-    }
-
-    uint64_t get_seq_id(){
-        return seq_id;
-    }
-
-    const void* get_session_id(){
-        return session_id;
-    }        
-
-private:
-    const void* session_id;
-    uint64_t seq_id;
-};
 
 class asio_messenger{
 private:
     boost::asio::io_service& io_service_;
     boost::asio::ip::tcp::socket socket_;
-    boost::asio::ip::tcp::endpoint endpoint_;
     char* msg_header;
-    boost::asio::ip::tcp::resolver resolver_;
     boost::asio::io_service::strand strand_;
     const ssize_t header_len;
-    int counts;
     bool is_closed;
     int role;
-    void* callback_arg;
+    void* c_process_msg_arg;
+    void* s_process_msg_arg;
     std::mutex send_lock;
     std::mutex receive_lock;
     ProcessMsgClient c_process_msg;
     ProcessMsg s_process_msg;
     std::atomic<bool> async_receive_loop;
-    std::mutex async_receive_loop_mutex;
-    std::map<uint64_t,MsgController*> pending_msg_map; 
+    std::map<uint64_t, MsgController*> pending_msg_map; 
     enum {
         STATUS_INIT = 0,
         STATUS_CONNECTING = 1,
@@ -78,7 +50,7 @@ private:
     volatile int _status;
     AtomicCounter64 send_index; 
     AtomicCounter64 receive_index;
-    //ThreadGroup thread_worker; // post hdcs_handle_request into other io_service.
+    std::shared_ptr<ThreadGroup> thread_worker_ptr; // post hdcs_handle_request into other io_service.
 
 public:
     asio_messenger( IOService& ios, int _role)
@@ -87,116 +59,79 @@ public:
         , socket_(ios)
         , header_len(sizeof(MsgHeader))
         , msg_header(new char[sizeof(MsgHeader)])
-        , resolver_(ios)
         , role(_role) // 0 is client, and 1 is server
         , async_receive_loop(false)
         , _status(STATUS_INIT)
-        //, thread_worker(5)
+        , thread_worker_ptr(NULL)
     {
 
         if(_role==0){
-            //aio_receive();
         }
     }
 
-    ~asio_messenger() {
-        if( !is_closed ){
+    ~asio_messenger()
+    {
+        if(!is_closed)
+        {
             close();
         }
         delete[] msg_header;
     }
     
-    void set_callback_arg(void* _arg){
-        callback_arg = _arg;
+    void set_process_msg_client(ProcessMsgClient _p_m)
+    {
+        c_process_msg = _p_m;
     }
 
-    int set_socket_option(){
-        boost::system::error_code ec;
-        boost::asio::ip::tcp::no_delay no_delay(true);
-        socket_.set_option(no_delay, ec);
-        if(ec){
-            std::cout<<"asio_messenger::set_socket_option failed: "<<ec.message()<<std::endl;
-            assert(0);
-        }
-        // 128k + header 
-        boost::asio::socket_base::send_buffer_size s_b(140000);
-        socket_.set_option(s_b, ec);
-        if(ec){
-            std::cout<<"asio_messenger::set_socket_option: send_buffer_size failed "<<ec.message()<<std::endl;
-            assert(0);
-        }
-        boost::asio::socket_base::receive_buffer_size r_b(140000);
-        socket_.set_option(r_b, ec);
-        if(ec){
-            std::cout<<"asio_messenger::set_socket_option: receive_buffer_size failed "<<ec.message()<<std::endl;
-            assert(0);
-        }
+    void set_process_msg_arg_client(void *_arg)
+    {
+        c_process_msg_arg = _arg;
+    }
 
+    void set_process_msg_server(ProcessMsg _p_m)
+    {
+        s_process_msg = _p_m;
+    }
+
+    void set_process_msg_arg_server(void* _arg)
+    {
+        s_process_msg_arg = _arg;
+    }
+
+    int startup_post_process_msg(int _xx)
+    {
+        thread_worker_ptr.reset(new ThreadGroup(_xx));
         return 0;
     }
 
-    void close(){
+    void close()
+    {
         // just can be called only once.
-        if(atomic_swap( &_status, (int)STATUS_CLOSED) != STATUS_CLOSED ){
+        if(atomic_swap( &_status, (int)STATUS_CLOSED) != STATUS_CLOSED)
+        {
             boost::system::error_code ec;
             socket_.shutdown(tcp::socket::shutdown_both, ec);
-            if(ec){
+            if(ec)
+            {
                 std::cout<<"close() failed: "<<ec.message()<<std::endl;
             }
         }
     }
 
-    boost::asio::ip::tcp::socket& get_socket() {
+    // by client/server.
+    boost::asio::ip::tcp::socket& get_socket()
+    {
         return socket_;
-
     }
 
-    void cancel(){
+    void cancel()
+    {
         boost::system::error_code ec;
         socket_.cancel(ec);
-        if(ec){
+        if(ec)
+        {
             std::cout<<"asio_messenger::cancel, cancle failed: "<<ec.message()<<std::endl;
         }
-    }
-
-    // called by server..
-    void set_server_process_msg(ProcessMsg _process_msg){
-       	s_process_msg = _process_msg;
-    }
-
-    int sync_connection(std::string ip_address, std::string port, ProcessMsgClient _process_msg){
-        _status = STATUS_CONNECTING;
-        boost::system::error_code ec;
-        boost::asio::ip::tcp::resolver::iterator iter =
-            resolver_.resolve(boost::asio::ip::tcp::resolver::query(ip_address, port), ec);
-        if(ec){
-            std::cout<<"asio_messenger::sync_connection, resolver failed: "<<ec.message()<<std::endl;
-            assert(0);
-        }
-        _status = STATUS_CONNECTED;
-        endpoint_ = *iter;
-        socket_.connect(endpoint_, ec);
-        if(ec){
-            if(ec == boost::asio::error::operation_aborted){
-                return 0;
-            }
-            std::cout<<"asio_messenger::sync_connection, connect  failed: "<<ec.message()<<std::endl;
-            assert(0);
-        }
-        int ret = set_socket_option();
-        if(ret){
-            assert(0);
-        }
-        is_closed = false; 
-        c_process_msg = _process_msg; 
-        aio_receive();
-        async_receive_loop.store(true);
-        return 0;
-    }
-
-    // TODO
-    int async_connection(){
-        return 0;
     }
 
     //called by client.
@@ -215,7 +150,6 @@ public:
             std::cout<<"asio_messenger::sync_send failed: ret != send_bytes "<<std::endl;
             assert(0);
         }
-        ++send_index;
         MsgController* msg_cntl = new MsgController(true); // ture express this msg is sync
         pending_msg_map[_seq_id]=msg_cntl;
         msg_cntl->wait(); // waitting until its ack signal. 
@@ -285,19 +219,28 @@ public:
             delete[] receive_buffer;
             return -1;
         }
-        c_process_msg(callback_arg, std::move(std::string(receive_buffer, content_size)));
-	//thread_worker.post(boost::bind(c_process_msg, callback_arg, std::move(std::string(data_buffer,content_size))));
+        c_process_msg(c_process_msg_arg, std::move(std::string(receive_buffer, content_size)));
+	//thread_worker.post(boost::bind(c_process_msg, c_process_msg_arg, std::move(std::string(data_buffer,content_size))));
         delete[] receive_buffer;
         return 0;
    }
 
+    // called by client. 
     ssize_t communicate(std::string send_buffer, uint64_t _seq_id){
+        ++send_index;
+        try_receive_msg();
+
         sync_send(send_buffer, _seq_id);
+
         return 0;
     }
     
     // called by client.
     void aio_communicate(std::string& send_buffer, uint64_t _seq_id){
+        // must firstly try to recevie.
+        ++send_index;
+        try_receive_msg();
+
         Message msg(send_buffer, _seq_id);
         std::string send_string(std::move(msg.to_buffer()));
         uint64_t ret = send_string.size();
@@ -312,15 +255,34 @@ public:
                         std::cout<<"asio_session::aync_send failed: ret != cb"<<std::endl;
                         assert(0);
                     }
-                    ++send_index;
+                    //++send_index;
                 }else{
                     error_handing("asio_messenger::aio_communicate: sending failed", ec);
                 }
             });
     }
 
+    // try to trigger asyn receive.
+    void try_receive_msg()
+    {
+        if((send_index != receive_index) && (async_receive_loop.load() == false))
+        {
+            async_receive_loop.store(true);
+            aio_receive();
+        }else{
+            // there is already one receive operaion, trigger fail..
+        }
+    }
+
     // called by client.
     void aio_receive(){
+        // if don't need to receive, end receiving loop.
+        if(send_index == receive_index)
+        {
+            async_receive_loop.store(false);
+            return;
+        }
+
         boost::asio::async_read(socket_, boost::asio::buffer(msg_header, header_len), boost::asio::transfer_exactly(header_len),
             [ this](const boost::system::error_code& err, uint64_t cb) {
                 if(!err){
@@ -346,14 +308,20 @@ public:
                                 aio_receive();
 
                                 //trigger request handler first
-				c_process_msg(callback_arg, std::move(std::string(data_buffer, content_size)));
-                                if(pending_msg_map.size()!=0){
+				//c_process_msg(c_process_msg_arg, std::move(std::string(data_buffer, content_size)));
+                                if(pending_msg_map.size() != 0){
+				    c_process_msg(c_process_msg_arg, std::move(std::string(data_buffer, content_size)));
                                     // lock? TODO
                                     pending_msg_map[sequence_id]->Done();
                                     delete pending_msg_map[sequence_id];
                                     pending_msg_map.erase(sequence_id);
+                                }else{
+                                    if(thread_worker_ptr == NULL){
+				        c_process_msg(c_process_msg_arg, std::move(std::string(data_buffer, content_size)));
+                                    }else{
+				        thread_worker_ptr->post(boost::bind(c_process_msg, c_process_msg_arg, std::move(std::string(data_buffer,content_size))));
+                                    }
                                 }
-				//thread_worker.post(boost::bind(c_process_msg, callback_arg, std::move(std::string(data_buffer,content_size))));
                             }else{   
                                 error_handing("asio_messenger::aio_receive: receiving content failed", err);
                             }
@@ -367,19 +335,20 @@ public:
 
     // server receive loop
     // receive msg, hdcs handle it, then send ack.
-   void aio_receive(SessionArg* arg){
+   void aio_receive_server(){
         boost::asio::async_read(socket_, boost::asio::buffer(msg_header, header_len), boost::asio::transfer_exactly(header_len),
-            [ this, arg](const boost::system::error_code& err, uint64_t cb) {
+            [ this](const boost::system::error_code& err, uint64_t cb) {
                 if(!err){
                     if(cb != header_len){
                         std::cout<<"asio_messenger::async_receive, firstly async_read failed: cb != header_len" << std::endl;
                         assert(0);
                     }
                     uint64_t content_size = ((MsgHeader*)msg_header)->get_data_size();
-                    arg->set_seq_id(((MsgHeader*)msg_header)->get_seq_id());
+                    SessionArg* temp_arg= new SessionArg(s_process_msg_arg);
+                    temp_arg->set_seq_id(((MsgHeader*)msg_header)->get_seq_id());
                     char* data_buffer = new char[content_size+1]();
                     boost::asio::async_read( socket_, boost::asio::buffer(data_buffer, content_size ), boost::asio::transfer_exactly(content_size),
-                        [this, arg, data_buffer, content_size]( const boost::system::error_code& err, uint64_t cb ){
+                        [this, temp_arg, data_buffer, content_size]( const boost::system::error_code& err, uint64_t cb ){
                             if(!err){
                                 if( content_size != cb ){
                                     std::cout<<"asio_messenger::async_receive, firstly async_read failed: cb != header_len" << std::endl;
@@ -390,9 +359,15 @@ public:
                                     assert(0);
                                 }
                                 ++receive_index;
-				s_process_msg((void*)arg, std::move(std::string(data_buffer,content_size)));
-			        aio_receive(arg);
-				//thread_worker.post(boost::bind(s_process_msg, arg, std::move(std::string(data_buffer,content_size))));
+                                if(thread_worker_ptr == NULL)
+                                {
+				    s_process_msg((void*)temp_arg, std::move(std::string(data_buffer,content_size)));
+                                }
+                                else
+                                {
+				    thread_worker_ptr->post(boost::bind(s_process_msg, temp_arg, std::move(std::string(data_buffer,content_size))));
+                                }
+			        aio_receive_server();
                             }else{ 
                                 error_handing("asio_messenger::aio_receive: receiving content failed", err);
                             }
@@ -406,9 +381,9 @@ public:
 
 private:
 
-   // will unitfy to encode error, then using switch.
+   // will unify to encode error, then using switch.
    // TODO
-   void error_handing(const std::string fail_reason, const boost::system::error_code& err){
+   void error_handing(const std::string error_reason, const boost::system::error_code& err){
        if(err == boost::asio::error::eof){
           close();
           return;
@@ -417,13 +392,13 @@ private:
            if(send_index == receive_index){
                // TODO
            }else{
-               std::cout<<fail_reason<<" : "<<err.message()<<std::endl;
+               std::cout<<error_reason<<" : "<<err.message()<<std::endl;
            }
            close();
            return;
        }
        // other error just close socket.
-       std::cout<<fail_reason<<" : "<<err.message()<<std::endl;
+       std::cout<<error_reason<<" : "<<err.message()<<std::endl;
        close();
        return;
    }

@@ -64,14 +64,26 @@ extern "C" ssize_t hdcs_aio_get_return_value(hdcs_completion_t c) {
 extern "C" int hdcs_open(void** io, char* name) {
   *io = malloc(sizeof(hdcs_ioctx_t));
   hdcs_ioctx_t* io_ctx = (hdcs_ioctx_t*)*io;
-  //io_ctx->conn = new Connection([](void* p, std::string s){client::request_handler(p, s);});
-  io_ctx->conn = new hdcs::networking::Connection([](void* p, std::string s){request_handler(p, s);}, 16, 5);
+
+  hdcs::networking::ClientOptions client_options;
+  client_options._io_service_num = 3;
+  client_options._session_num = 3;
+  client_options._thd_num_on_one_session = 3;
+  client_options._process_msg = ([](void* p, std::string s){request_handler(p, s);});
+  client_options._process_msg_arg = *io;
+
+  io_ctx->conn = new hdcs::networking::Connection(client_options);
 
   hdcs::HDCS_REQUEST_CTX msg_content(HDCS_CONNECT, nullptr, nullptr, 0, strlen(name), name);
-  io_ctx->conn->connect("127.0.0.1", "9000");
-  io_ctx->conn->set_session_arg(*io);
+  // the third param :
+  // TCP communication: 0
+  // RDMA communication: 1
+  // TODO local communication: 2  
+  io_ctx->conn->connect("127.0.0.1", "9000", (hdcs::networking::COMMUNICATION_TYPE)0); // TCP
+  //io_ctx->conn->connect("127.0.0.1", "9000", (hdcs::networking::COMMUNICATION_TYPE)1); // RDMA
 
   io_ctx->conn->communicate(std::move(std::string(msg_content.data(), msg_content.size())));
+  sleep(1);
   return 0;
 }
 

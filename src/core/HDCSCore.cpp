@@ -198,9 +198,17 @@ void HDCSCore::connect_to_replica (std::string name) {
 
     io_ctx = (hdcs_ioctx_t*)malloc(sizeof(hdcs_ioctx_t));
     replication_core_map[addr_port_str] = (void*)io_ctx;
-    io_ctx->conn = new hdcs::networking::Connection([](void* p, std::string s){request_handler(p, s);}, 16, 5);
-    io_ctx->conn->connect(addr, port);
-    io_ctx->conn->set_session_arg((void*)io_ctx);
+
+    hdcs::networking::ClientOptions client_options;
+    client_options._session_num = 5;
+    client_options._io_service_num = 5; 
+    client_options._thd_num_on_one_session = 3;
+    client_options._process_msg = ([](void* p, std::string s){request_handler(p, s);});
+    client_options._process_msg_arg = (void*)io_ctx;
+    
+    io_ctx->conn = new hdcs::networking::Connection(client_options);
+    io_ctx->conn->connect(addr, port, (hdcs::networking::COMMUNICATION_TYPE)0); // TCP
+    //io_ctx->conn->connect(addr, port, (COMMUNICATION_TYPR)1); //RDMA
 
     hdcs::HDCS_REQUEST_CTX msg_content(HDCS_CONNECT, nullptr, nullptr, 0, name.length(), const_cast<char*>(name.c_str()));
     io_ctx->conn->communicate(std::move(std::string(msg_content.data(), msg_content.size())));
