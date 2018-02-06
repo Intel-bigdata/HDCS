@@ -24,6 +24,9 @@ public:
         }
     }   
 
+    ~io_service_pool()
+    {}
+
     bool sync_run()
     {
         is_sync_model = true;
@@ -44,7 +47,9 @@ public:
         for (size_t i = 0; i < pool_size; ++i)
         {
             _pool[i]->stop();
-            _pool[i].reset();
+            // Because ThreadGroupImplPtr is shared_ptr,
+            // if in here call reset operation, destruction still call destruction
+            // , so lead to double free.
         }
         if(is_sync_model)
         {
