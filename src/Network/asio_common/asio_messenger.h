@@ -69,6 +69,7 @@ private:
     std::atomic<bool> async_receive_loop;
     std::mutex async_receive_loop_mutex;
     std::map<uint64_t,MsgController*> pending_msg_map; 
+    std::mutex pending_msg_map_lock;
     enum {
         STATUS_INIT = 0,
         STATUS_CONNECTING = 1,
@@ -348,10 +349,12 @@ public:
                                 //trigger request handler first
 				c_process_msg(callback_arg, std::move(std::string(data_buffer, content_size)));
                                 if(pending_msg_map.size()!=0){
+                                    pending_msg_map_lock.lock();
                                     // lock? TODO
                                     pending_msg_map[sequence_id]->Done();
                                     delete pending_msg_map[sequence_id];
                                     pending_msg_map.erase(sequence_id);
+                                    pending_msg_map_lock.unlock();
                                 }
 				//thread_worker.post(boost::bind(c_process_msg, callback_arg, std::move(std::string(data_buffer,content_size))));
                             }else{   
