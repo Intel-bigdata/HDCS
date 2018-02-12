@@ -17,12 +17,24 @@
 #include <string>
 
 namespace hdcs {
+  struct hdcs_repl_options {
+    hdcs_repl_options(std::string role, std::vector<std::string> &&replication_nodes):
+      role(role),
+      replication_nodes(replication_nodes){};
+    std::string role;
+    std::vector<std::string> replication_nodes;
+  };
+
 namespace core {
   class HDCSCore {
   public:
     std::mutex core_lock;
     WorkQueue<std::shared_ptr<Request>> request_queue;
-    HDCSCore(std::string name, std::string cfg_file, struct hdcs_repl_options replication_options);
+    HDCSCore(
+      std::string host,
+      std::string name,
+      std::string cfg_file,
+      hdcs_repl_options &&replication_options = std::move(hdcs_repl_options("master", {})));
     ~HDCSCore();
     void close();
     void promote_all();
@@ -44,11 +56,14 @@ namespace core {
     class WordDelimitedBy : public std::string {};
     std::mutex replication_core_map_mutex;
     hdcs_replica_nodes_t replication_core_map;
+    hdcs_repl_options replication_options;
+    std::string name;
+    std::string host;
 
     void process();
     void process_request(std::shared_ptr<Request> req);
     void map_block(BlockRequest &&block_request);
-    void connect_to_replica(std::string name);
+    void connect_to_replica(std::vector<std::string> replication_nodes);
     void replica_send_out(AioCompletion* comp, uint64_t offset, uint64_t length, char* data);
 
   };

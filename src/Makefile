@@ -45,7 +45,7 @@ test: $(UNIT_TESTS)
 	echo "./test --gtest_output='xml:testresult.xml'" | bash
 
 clean:
-	rm -f test testresult.xml $(CONTROLLER) $(DIST_LIB) $(TEST_TOOL) $(UNIT_TESTS) && find . -name "*.o" | xargs rm -f
+	rm -f test testresult.xml $(CONTROLLER) $(DIST_LIB) $(COMMON_OBJECTS) $(TEST_TOOL) $(UNIT_TESTS) && find . -name "*.o" | xargs rm -f
 
 uninstall:
 	rm -rf /usr/local/include/hdcs

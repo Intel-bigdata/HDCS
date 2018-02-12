@@ -20,18 +20,16 @@ private:
 
 void TEST_Config::no_config()
 {
-  struct hdcs_repl_options repl_opt("master", "192.168.0.1:9091");
-  cfg = new Config("", repl_opt, "general.conf");
+  cfg = new Config("", "general.conf");
 }
 
 
 int TEST_Config::controller_config()
 {
-  struct hdcs_repl_options repl_opt("master", "192.168.0.1:9091");
-  cfg = new Config("", repl_opt, "../general.conf");
-  assert(cfg->configValues["role"] == "hdcs_master");
-  assert(cfg->configValues["cfg_file_path"] == "../general.conf");
-  assert(cfg->configValues["replication_nodes"] == "192.168.0.1:9091");
+  cfg = new Config("", "../general.conf");
+  assert(cfg->get_config("HDCSCore")["role"] == "hdcs_master");
+  assert(cfg->get_config("HDCSCore")["cfg_file_path"] == "../general.conf");
+  assert(cfg->get_config("HDCSCore")["replication_nodes"] == "192.168.0.1:9091");
   delete cfg;
   return 0;
 }
@@ -39,10 +37,9 @@ int TEST_Config::controller_config()
 int TEST_Config::volume_config()
 {
 
-  struct hdcs_repl_options repl_opt("master", "192.168.0.1:9091");
-  cfg = new Config("testrbd", repl_opt, "../general.conf");
-  assert(cfg->configValues["cfg_file_path"] == "../general.conf");
-  assert(cfg->configValues["rbd_volume_name"] == "testrbd");
+  cfg = new Config("testrbd", "../general.conf");
+  assert(cfg->get_config("HDCSCore")["cfg_file_path"] == "../general.conf");
+  assert(cfg->get_config("HDCSCore")["rbd_volume_name"] == "testrbd");
   delete cfg;
   return 0;
 }

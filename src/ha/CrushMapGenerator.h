@@ -11,6 +11,7 @@ extern "C" {
 #include <vector>
 #include <list>
 #include <mutex>
+#include <sstream>
 
 #define ASSERT_EQ(X, Y) assert(X == Y)
 namespace hdcs {
@@ -73,10 +74,12 @@ public:
     finalize_host_tree ();
   }
 
-  void get (HDCS_DOMAIN_MAP_TYPE *domain_map) {
-    for (auto &it : *domain_map) {
-      get_host_domain(it.first, &(it.second));
+  HDCS_DOMAIN_MAP_TYPE get () {
+    HDCS_DOMAIN_MAP_TYPE domain_map;
+    for (auto &it : host_map) {
+      domain_map[it.first] = get_host_domain(it.first);
     }
+    return domain_map;
   }
 
   void offline_host (std::string host_id) {
@@ -161,24 +164,26 @@ private:
                               );
     ASSERT_EQ(0, crush_add_bucket(m, 0, *bucket_ptr, bucket_no_ptr));
     ASSERT_EQ(0, crush_bucket_add_item(m, root, *bucket_no_ptr, (*bucket_ptr)->weight));
-    //printf("crush_map add host %d as bucket_no %d, weight %d\n", host_index, bucket_no, bucket->weight);
   }
 
-  int get_host_domain (std::string host_id, HDCS_DOMAIN_ITEM_TYPE* domain_item ) {
+  HDCS_DOMAIN_ITEM_TYPE get_host_domain (std::string host_id) {
+    HDCS_DOMAIN_ITEM_TYPE domain_item;
     std::lock_guard<std::mutex> lock(crushmap_mutex);  
 
     auto it = host_map.find(host_id);
     if (it == host_map.end()) {
-      return -1;
+      return domain_item;
     }
     
     int host_index = it->second->host_index;
 
     int result_len;
+    bool do_reset = true;
     int result[replication_count] = {0};
     if (weights[host_index] == 0x00000) {
-      domain_item->clear();
-      return 0;
+      /*domain_item.clear();
+      return domain_item;*/
+      do_reset = false;
     }
     weights[host_index] = 0x00000;
 
@@ -186,24 +191,26 @@ private:
     result_len = crush_do_rule(m, //crushmap
                                ruleno, //rule_number in crushmap
                                host_index, //hash_id
-                               &result[1], //result
-                               replication_count - 1, //replication_number
+                               result, //result
+                               replication_count, //replication_number
                                weights, // weights of each device
                                host_count, // device_count
                                cwin, //crush workspace
                                NULL);
 
-    domain_item->resize(result_len + 1);
+    domain_item.resize(result_len);
     for (auto &it : host_map) {
-      for (int i = 0; i < result_len + 1; i++){
+      for (int i = 0; i < result_len; i++){
         if (it.second->host_index == result[i]) {
-          domain_item->at(i) = it.first;
+          domain_item.at(i) = it.first;
         }
       }
     }
 
-    weights[host_index] = 0x10000;
-    return result_len + 1;
+    if (do_reset) {
+      weights[host_index] = 0x10000;
+    }
+    return domain_item;
   }
 
   

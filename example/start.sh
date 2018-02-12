@@ -1,0 +1,10 @@
+HDCS --name host02       -r master -c general.conf &
+HDCS --name host02_slave -r slave -c general.conf &
+HDCS --name host03       -r master -c general.conf &
+HDCS --name host03_slave -r slave -c general.conf &
+HDCS --name host04       -r master -c general.conf &
+HDCS --name host04_slave -r slave -c general.conf &
+HDCS --name host05       -r master -c general.conf &
+HDCS --name host05_slave -r slave -c general.conf &
+HDCS --name host06       -r master -c general.conf &
+HDCS --name host06_slave -r slave -c general.conf &

@@ -38,7 +38,6 @@ public:
     // provide this connection to hdcs_core_stat_controller
     core_stat_controller.set_conn(it.first->second);
     core_stat_controller.send_stat_map();
-    printf ("set hdcs_core_stat_controller conn to %p\n", it.first->second);
 
     // clean old conn
     for (name_to_conn_map_t::iterator it = conn_map.begin();
@@ -68,10 +67,6 @@ public:
     core_stat_controller.unregister_core(hdcs_core_id);
   }
 
-  /*void apply_domain_map_item (HDCS_DOMAIN_MAP_ITEM domain_map_item) {
-    // 1. notify HDCS controller 
-  }*/
-
   void handle_heartbeat_request (void* session_arg, std::string msg_content) {
     hb_service.request_handler(session_arg, msg_content, &listener);
   }
@@ -86,21 +81,35 @@ public:
 
   void handle_domain_map_request (void* session_arg, std::string msg_content) {
     HDCS_DOMAIN_ITEM_MSG domain_item_msg(msg_content);
-    HDCS_DOMAIN_ITEM_TYPE domain_item = domain_item_msg.get_domain_item();
-    std::cout << "Received Domain Items: ";
-    for (auto &it : domain_item) {
-      std::cout << it << ", ";
-    }
-    std::cout << std::endl;
+    domain_item = domain_item_msg.get_domain_item();
   }
 
   void handle_ha_conn_request (void* session_arg, std::string msg_content) {
+  }
+
+  std::string printToString_domain_item() {
+    bool first = true;
+    std::stringstream ss;
+    for (auto &it : domain_item) {
+      if (first) {
+        first = false;
+      } else {
+        ss << ",";
+      }
+      ss << it;
+    }
+    return ss.str();
+  }
+
+  HDCS_DOMAIN_ITEM_TYPE get_domain_item() {
+    return domain_item;
   }
 
 private:
   HeartBeatService hb_service;
   name_to_conn_map_t conn_map;
   HDCSCoreStatController core_stat_controller;
+  HDCS_DOMAIN_ITEM_TYPE domain_item;
 };
 
 }// ha

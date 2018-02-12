@@ -4,6 +4,8 @@
 #include "common/Request.h"
 #include "common/Config.h"
 #include "core/HDCSCore.h"
+#include "common/Config.h"
+#include <boost/algorithm/string.hpp>
 //#include "common/HDCS_REQUEST_HANDLER.h"
 
 using namespace hdcs;
@@ -11,8 +13,7 @@ using namespace hdcs;
 
 libhdcs::libhdcs(const char* name) {
   //TODO(): repl_opt should be ignored
-  hdcs_repl_options repl_opt("master", "");
-  hdcs_inst = new core::HDCSCore(name, "/etc/hdcs/general.conf", repl_opt);
+  hdcs_inst = new core::HDCSCore("" , name, "/etc/hdcs/general.conf");
 }
 
 libhdcs::~libhdcs() {
@@ -64,14 +65,22 @@ extern "C" ssize_t hdcs_aio_get_return_value(hdcs_completion_t c) {
 extern "C" int hdcs_open(void** io, char* name) {
   *io = malloc(sizeof(hdcs_ioctx_t));
   hdcs_ioctx_t* io_ctx = (hdcs_ioctx_t*)*io;
-  //io_ctx->conn = new Connection([](void* p, std::string s){client::request_handler(p, s);});
+
   io_ctx->conn = new hdcs::networking::Connection([](void* p, std::string s){request_handler(p, s);}, 16, 5);
 
   hdcs::HDCS_REQUEST_CTX msg_content(HDCS_CONNECT, nullptr, nullptr, 0, strlen(name), name);
-  io_ctx->conn->connect("127.0.0.1", "9000");
+  hdcs::Config *hdcs_config = new hdcs::Config(name);
+  std::string addr = hdcs_config->get_config("HDCSClient")["addr"];
+  std::vector<std::string> ip_port;
+  boost::split(ip_port, addr, boost::is_any_of(":"));
+  std::string ip = ip_port[0];
+  std::string port = ip_port[1];
+
+  io_ctx->conn->connect(ip, port);
   io_ctx->conn->set_session_arg(*io);
 
   io_ctx->conn->communicate(std::move(std::string(msg_content.data(), msg_content.size())));
+  delete hdcs_config;
   return 0;
 }
 
@@ -90,12 +99,6 @@ extern "C" int hdcs_aio_read(void* io, char* data, uint64_t offset, uint64_t len
 
 extern "C" int hdcs_aio_write(void* io, const char* data, uint64_t offset, uint64_t length, hdcs_completion_t c){
   void* comp = (void*)c;
-  if (offset == 871018496) {
-    ((hdcs_ioctx_t*)io)->comp = c;
-    struct timespec spec;
-    clock_gettime(CLOCK_REALTIME, &spec);
-    fprintf(stderr, "%lu: client send %lu - %lu, comp: %p\n", (spec.tv_sec * 1000000000L + spec.tv_nsec), offset, offset + length, comp);
-  }
   hdcs::HDCS_REQUEST_CTX msg_content(HDCS_WRITE, ((hdcs_ioctx_t*)io)->hdcs_inst, comp, offset, length, const_cast<char*>(data));
   ((hdcs_ioctx_t*)io)->conn->aio_communicate(std::move(std::string(msg_content.data(), msg_content.size())));
   return 0;

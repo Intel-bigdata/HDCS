@@ -7,17 +7,18 @@
 namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
+  std::string name;
   std::string config_name;
   std::string hdcs_role;
-  std::string replication_nodes;
 
   po::options_description desc("Usage:");
   desc.add_options()
       ("help,h", "Show brief usage message")
       ("version,v", "Display the version number")
       ("config,c", po::value<std::string>()->default_value("general.conf"), "Path to Config file")
+      ("name,n", po::value<std::string>()->default_value("HDCS01"), "Name defined in Config file")
       ("role,r", po::value<std::string>()->default_value("slave"), "Role")
-      ("replicate_nodes,n", po::value<std::string>()->default_value("192.168.1.1:9091"), "Replication nodes");
+      ;
 
   po::variables_map args;
 
@@ -29,7 +30,7 @@ int main(int argc, char **argv) {
         return 0;
       } else if (args.count("version")) {
         //TODO(): extract from header file
-        std::cout << "HDCS 1.3.0" << std::endl;
+        std::cout << "HDCS 1.4.1" << std::endl;
         return 0;
       }
 
@@ -40,11 +41,10 @@ int main(int argc, char **argv) {
 
   po::notify(args);
 
+  name = args["name"].as<std::string>();
   config_name = args["config"].as<std::string>();
   hdcs_role = args["role"].as<std::string>();
-  replication_nodes = args["replicate_nodes"].as<std::string>();
 
-  hdcs::hdcs_repl_options repl_opt(hdcs_role, replication_nodes);
-  hdcs::HDCSController controller(repl_opt, config_name);
+  hdcs::HDCSController controller(name, config_name, hdcs_role);
   return 0;
 }

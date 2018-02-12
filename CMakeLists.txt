@@ -34,15 +34,32 @@ add_library(hdcs SHARED
 
 target_link_libraries(hdcs ${PROJECT_SOURCE_DIR}/deps/src/hlkvds/src/libhlkvds.a boost_thread boost_system boost_program_options rados rbd)
 
+
 add_executable(HDCS
     ${HDCS_SRC_DIR}/HDCS.cpp
     ${HDCS_SRC_DIR}/HDCSController.cpp
     )
 
-target_link_libraries(HDCS hdcs boost_thread boost_system boost_program_options rados rbd)
+target_link_libraries(HDCS hdcs boost_thread boost_system boost_program_options rados rbd crush)
+
+
+add_executable(hdcs-mgr
+  ${HDCS_SRC_DIR}/HDCSManager.cpp
+  )
+
+target_link_libraries(hdcs-mgr boost_thread boost_system boost_program_options crush)
+
+
+add_executable(hdcs-admin
+  ${HDCS_SRC_DIR}/HDCSAdmin.cpp
+  )
+
+target_link_libraries(hdcs-admin boost_thread boost_system boost_program_options crush)
 
 
 install(TARGETS HDCS DESTINATION bin)
+install(TARGETS hdcs-mgr DESTINATION bin)
+install(TARGETS hdcs-admin DESTINATION bin)
 install(TARGETS hdcs DESTINATION lib)
 install(FILES ${HDCS_SRC_DIR}/include/libhdcs.h DESTINATION include/hdcs)
 install(FILES ${HDCS_SRC_DIR}/include/libhdcs.h DESTINATION include/hdcs)
@@ -106,4 +123,12 @@ add_custom_target(
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     )
 add_dependencies(hlkvds update_submodules)
+
+
+set(HLKVDS_ROOT deps/src/hlkvds CACHE STRING "Google Test source root")
+include_directories(
+    ${PROJECT_SOURCE_DIR}/${HLKVDS_ROOT}/src/include
+    )
+
+
 add_dependencies(hdcs hlkvds)

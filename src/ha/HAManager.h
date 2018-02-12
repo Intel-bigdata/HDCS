@@ -1,6 +1,10 @@
 #ifndef HDCS_HA_MANAGER_H
 #define HDCS_HA_MANAGER_H
 
+#include "ha/HACore.h"
+#include "common/HeartBeat/HeartBeatService.h"
+#include "ha/HDCSCoreStatController.h"
+#include "ha/HDCSDomainMapRequestHandler.h"
 #include "common/Timer.h"
 #include "common/AioCompletionImp.h"
 #include <iostream>
@@ -23,6 +27,8 @@ public:
       timeout_event = new AioCompletionImp([&](ssize_t r){
         printf("Initiation status check.\n");
         for (auto &host : ha_config.get_host_list()) {
+          if (host == name)
+            continue;
           if (conn_map.find(host) == conn_map.end()) {
             core_stat_controller.set_stat_map(host, HDCS_HA_NODE_STAT_DOWN);
           }
@@ -36,6 +42,10 @@ public:
   }
 
   void register_hdcs_node (std::string node_name) {
+    auto search_it = conn_map.find(node_name);
+    if (search_it != conn_map.end()) {
+      return;
+    }
     std::string node = ha_config.get_host_addr(node_name);
     //create conn
     int colon_pos;

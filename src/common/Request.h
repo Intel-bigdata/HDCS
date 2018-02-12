@@ -47,12 +47,6 @@ typedef uint8_t IO_TYPE;
       status += r;
       if (pending_requests == 0) {
         completed = true;
-        if (offset == 871018496) {
-        struct timespec spec;
-        clock_gettime(CLOCK_REALTIME, &spec);
-        fprintf(stderr, "%lu: hdcs complete, %lu - %lu\n",
-            (spec.tv_sec * 1000000000L + spec.tv_nsec), offset, (offset + length));
-        }
       }
       req_mutex.unlock();
       if (completed) {

@@ -184,7 +184,6 @@ public:
     for (auto &item : hdcs_core_stat_map) {
       msg_content.loadline(i++, item.second->get_stat());
     }
-    printf ("hdcs_core_stat_controller conn: %p\n", conn);
     conn->aio_communicate(std::move(std::string(msg_content.data(), msg_content.size())));
   }
 
