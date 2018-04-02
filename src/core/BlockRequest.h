@@ -14,10 +14,12 @@ class BlockRequest {
 public:
   BlockRequest(char* data_ptr, uint64_t offset,
                uint64_t size, std::shared_ptr<Request> req,
-               Block* block, std::shared_ptr<store::DataStoreRequest> data_store_req) :
+               Block* block, std::shared_ptr<store::DataStoreRequest> data_store_req,
+               uint32_t tid) :
                data_ptr(data_ptr), offset(offset), 
                size(size), req(req), block(block),
-               data_store_req(data_store_req), should_delete(false) {
+               data_store_req(data_store_req), should_delete(false),
+               tid(tid) {
     if (req != nullptr) {
       req->add_request();  
     }           
@@ -34,6 +36,7 @@ public:
   uint64_t size;
   char* data_ptr;
   bool should_delete;
+  uint32_t tid;
   std::shared_ptr<Request> req;
   std::shared_ptr<store::DataStoreRequest> data_store_req;
 };

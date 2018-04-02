@@ -12,7 +12,12 @@ namespace store {
 
   class KVStore : public DataStore {
   public:
-    KVStore(std::string store_path, uint64_t total_size, uint64_t store_size, uint64_t block_size);
+    KVStore(std::string store_path, 
+        uint64_t total_size,
+        uint64_t store_size,
+        uint64_t block_size,
+        uint32_t log_size,
+        std::string hdcs_core_type);
     ~KVStore();
 
     int write(char* data, uint64_t offset, uint64_t size){}

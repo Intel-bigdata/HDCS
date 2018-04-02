@@ -16,9 +16,11 @@ namespace hdcs {
 namespace core {
 HDCSCore::HDCSCore(std::string host, std::string name,
   std::string cfg_file,
+  HDCSCoreStatGuard* core_stat,
   hdcs_repl_options &&replication_options_param):
   host(host),
   name(name),
+  core_stat(core_stat),
   replication_options(replication_options_param) {
   config = new Config(host + "_" + name, cfg_file);
 
@@ -33,10 +35,14 @@ HDCSCore::HDCSCore(std::string host, std::string name,
   }
 
   int hdcs_thread_max = stoi(config->get_config("HDCSCore")["op_threads_num"]);
+  uint64_t request_timeout = stoull(config->get_config("HDCSCore")["request_timeout_nanoseconds"]);
   hdcs_op_threads = new TWorkQueue(hdcs_thread_max);
   uint64_t total_size = stoull(config->get_config("HDCSCore")["total_size"]);
   uint64_t block_size = stoull(config->get_config("HDCSCore")["cache_min_alloc_size"]);
   bool cache_policy_mode = config->get_config("HDCSCore")["policy_mode"].compare(std::string("cache")) == 0 ? true : false;
+
+  replica_size = stoi(config->get_config("HDCSCore")["replica_size"]);
+  min_replica_size = stoi(config->get_config("HDCSCore")["min_replica_size"]);
 
   std::string engine_type = config->get_config("HDCSCore")["entine_type"];
   std::string path = config->get_config("HDCSCore")["cache_dir_run"];
@@ -54,27 +60,45 @@ HDCSCore::HDCSCore(std::string host, std::string name,
     connect_to_replica(replication_options.replication_nodes);
   }
 
+  std::cout << "create BlockGuard" << std::endl;
   block_guard = new BlockGuard(total_size, block_size,
                                replication_core_map.size(),
+                               request_timeout,
                                std::move(replication_core_map));
+  std::cout << "created BlockGuard" << std::endl;
   BlockMap* block_ptr_map = block_guard->get_block_map();
-  store::DataStore* datastore = nullptr;
-
+  uint64_t log_size = stoull(config->get_config("HDCSCore")["commit_log_max_size"]);
   if (cache_policy_mode) {
+    std::cout << "create DataStore" << std::endl;
     uint64_t cache_size = stoull(config->get_config("HDCSCore")["cache_total_size"]);
     float cache_ratio_health = stof(config->get_config("HDCSCore")["cache_ratio_health"]);
     uint64_t timeout_nanosecond = stoull(config->get_config("HDCSCore")["cache_dirty_timeout_nanoseconds"]);
     CACHE_MODE_TYPE cache_mode = config->get_config("HDCSCore")["cache_mode"].compare(std::string("readonly")) == 0 ? CACHE_MODE_READ_ONLY : CACHE_MODE_WRITE_BACK;
+    if (engine_type == "kv") {
+      datastore = new store::KVStore(path, total_size, cache_size, block_size, log_size, replication_options.role);
+    } else {
+      datastore = new store::SimpleBlockStore(path, total_size, cache_size, block_size, log_size, replication_options.role);
+    }
+
+    std::cout << "create Policy" << std::endl;
     policy = new CachePolicy(total_size, cache_size, block_size, block_ptr_map,
-                      datastore->create_engine(engine_type, path, total_size, cache_size, block_size),
+                      datastore,
                       new store::RBDImageStore(pool_name, volume_name, block_size),
                       cache_ratio_health, &request_queue,
                       timeout_nanosecond, cache_mode, hdcs_thread_max);
   } else {
+    std::cout << "create DataStore" << std::endl;
+    if (engine_type == "kv") {
+      datastore = new store::KVStore(path, total_size, total_size, block_size, log_size, replication_options.role);
+    } else {
+      datastore = new store::SimpleBlockStore(path, total_size, total_size, block_size, log_size, replication_options.role);
+    }
+
+    std::cout << "create Policy" << std::endl;
     policy = new TierPolicy(total_size, block_size, block_ptr_map,
-                    datastore->create_engine(engine_type, path, total_size, total_size, block_size),
+                    datastore,
                     new store::RBDImageStore(pool_name, volume_name, block_size),
-                    &request_queue, hdcs_thread_max);
+                    &request_queue, hdcs_thread_max, core_stat);
   }
 
   go = true;
@@ -90,6 +114,7 @@ HDCSCore::~HDCSCore() {
     ((hdcs_ioctx_t*)hdcs_replica.second)->conn->close();
     free((hdcs_ioctx_t*)hdcs_replica.second);
   }
+  delete datastore;
   delete policy;
   delete block_guard;
   delete main_thread;
@@ -163,7 +188,7 @@ void HDCSCore::map_block(BlockRequest &&block_request) {
   }
   block->block_mutex.unlock();
   if (do_process) {
-    hdcs_op_threads->add_task(std::bind(&BlockOp::send, block_ops_head, nullptr));
+    hdcs_op_threads->add_task(std::bind(&BlockOp::send, block_ops_head, nullptr, 0));
     //block_ops_head->send();
   }
 }
@@ -211,6 +236,29 @@ void HDCSCore::connect_to_replica (std::vector<std::string> replication_nodes) {
     hdcs::HDCS_REQUEST_CTX msg_content(HDCS_CONNECT, nullptr, nullptr, 0, name.length(), const_cast<char*>(name.c_str()));
     io_ctx->conn->communicate(std::move(std::string(msg_content.data(), msg_content.size())));
   }
+}
+
+bool HDCSCore::check_data_consistency () {
+  //return core_stat == HDCS_CORE_STAT_OK ? true : false;
+  return datastore->guard->check_data_consistency();
+}
+
+uint8_t HDCSCore::get_peered_core_num () {
+  uint8_t healthy_peer_num = 0;
+  for (auto& it : replication_core_map) {
+    if (((hdcs_ioctx_t*)it.second)->stat == HDCS_CORE_STAT_OK) {
+      healthy_peer_num ++;
+    }
+  }
+  return healthy_peer_num;
+}
+
+uint8_t HDCSCore::get_min_replica_size () {
+  return min_replica_size;
+}
+
+uint8_t HDCSCore::get_replica_size () {
+  return replica_size;
 }
 
 }// core

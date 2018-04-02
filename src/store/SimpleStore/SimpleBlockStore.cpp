@@ -15,7 +15,10 @@ namespace store {
 SimpleBlockStore::SimpleBlockStore(std::string store_path,
                                    uint64_t total_size,
                                    uint64_t store_size,
-                                   uint64_t block_size) :
+                                   uint64_t block_size,
+                                   uint32_t log_size,
+                                   std::string hdcs_core_type) :
+                                   DataStore(store_path, log_size, hdcs_core_type),
                                    block_size(block_size),
                                    store_size(store_size){
   std::string data_store_path = store_path + ".data"; 

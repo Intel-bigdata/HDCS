@@ -7,6 +7,7 @@
 #include "store/DataStore.h"
 #include "common/WorkQueue.h"
 #include "common/AioCompletion.h"
+#include "core/HDCSCoreStatMachine.h"
 #include <vector>
 #include <mutex>
 #include <condition_variable>
@@ -23,7 +24,8 @@ public:
               store::DataStore *data_store,
               store::DataStore *back_store,
               WorkQueue<std::shared_ptr<Request>> *request_queue,
-              int process_threads_num);
+              int process_threads_num,
+              HDCSCoreStatGuard* core_stat);
   ~TierPolicy();
   BlockOp* map(BlockRequest &&block_request, BlockOp** block_op_end);
   void flush_all();
@@ -35,6 +37,7 @@ private:
   uint64_t total_size;
   uint32_t block_size;
   int process_threads_num;
+  HDCSCoreStatGuard* core_stat_ptr;
 
   store::DataStore *data_store;
   store::DataStore *back_store;

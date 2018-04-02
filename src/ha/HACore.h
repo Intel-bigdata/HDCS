@@ -110,7 +110,7 @@ public:
   }
 
   int get_replication_count () {
-    return stoi(ha_config.get("hdcs_replication_count"));
+    return 1 + stoi(ha_config.get("replica_size"));
   }
 
   networking::server listener;

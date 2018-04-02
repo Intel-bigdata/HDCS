@@ -4,6 +4,7 @@
 #include <string>
 #include <stdint.h>
 #include "common/AioCompletion.h"
+#include "store/DataStoreGuard.h"
 
 namespace hdcs {
 namespace store {
@@ -14,13 +15,13 @@ typedef uint32_t BLOCK_STATUS_TYPE;
   class DataStore {
   public:
     DataStore() {}
-    virtual ~DataStore() {}
+    DataStore(std::string path, uint32_t log_size, std::string hdcs_core_type) {
+      guard = new DataStoreGuard(path, log_size, hdcs_core_type); 
+    }
+    virtual ~DataStore() {
+      delete guard;
+    }
 
-    static DataStore* create_engine(const std::string engine_type,
-                                    const std::string store_path,
-                                    const uint64_t total_size,
-                                    const uint64_t store_size,
-                                    const uint64_t block_size);
     virtual int write(char* data, uint64_t offset, uint64_t size) = 0;
     virtual int read(char* data, uint64_t offset, uint64_t size) = 0;
     virtual int aio_write(char* data, uint64_t offset, uint64_t size, AioCompletion* on_finish) = 0;
@@ -34,6 +35,7 @@ typedef uint32_t BLOCK_STATUS_TYPE;
     virtual int block_discard(uint64_t block_id) = 0;
     virtual int block_meta_update(uint64_t block_id, BLOCK_STATUS_TYPE status) = 0;
     virtual BLOCK_STATUS_TYPE get_block_meta(uint64_t block_id) = 0;
+    DataStoreGuard* guard;
   };
 }// store
 }// hdcs

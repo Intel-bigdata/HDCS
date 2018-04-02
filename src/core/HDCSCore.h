@@ -26,6 +26,7 @@ namespace hdcs {
   };
 
 namespace core {
+class HDCSCoreStatGuard;
   class HDCSCore {
   public:
     std::mutex core_lock;
@@ -34,7 +35,9 @@ namespace core {
       std::string host,
       std::string name,
       std::string cfg_file,
-      hdcs_repl_options &&replication_options = std::move(hdcs_repl_options("master", {})));
+      HDCSCoreStatGuard* core_stat = nullptr,
+      hdcs_repl_options &&replication_options = std::move(hdcs_repl_options("master", {}))
+      );
     ~HDCSCore();
     void close();
     void promote_all();
@@ -42,6 +45,12 @@ namespace core {
     void queue_io (std::shared_ptr<Request> req);
     void aio_read (char* data, uint64_t offset, uint64_t length, void* c);
     void aio_write (char* data, uint64_t offset, uint64_t length, void* c);
+
+    // for failover
+    bool check_data_consistency();
+    uint8_t get_peered_core_num();
+    uint8_t get_min_replica_size();
+    uint8_t get_replica_size();
   private:
     TWorkQueue *hdcs_op_threads;
     std::thread *main_thread;
@@ -59,6 +68,10 @@ namespace core {
     hdcs_repl_options replication_options;
     std::string name;
     std::string host;
+    store::DataStore* datastore;
+    uint8_t replica_size;
+    uint8_t min_replica_size;
+    HDCSCoreStatGuard* core_stat;
 
     void process();
     void process_request(std::shared_ptr<Request> req);

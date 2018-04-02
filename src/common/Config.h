@@ -72,7 +72,7 @@ public:
       ConfigInfo configValues{
         {"hdcs_HAManager_name", "HDCSManager"},
         {"ha_heartbeat_listen_port", "10000"},
-        {"hdcs_replication_count", "3"},
+        {"replica_size", "3"},
         {"status_check_timeout", "30000000000"},
         {"layback_domain_distribute_timeout", "10000000000"},
       };
@@ -149,9 +149,13 @@ public:
         {"cache_total_size","10737418240"},
         {"cache_ratio_health","0.85"},
         {"cache_dirty_timeout_nanoseconds", "10000000000"},
+        {"request_timeout_nanoseconds", "10000000000"},
         {"cache_min_alloc_size","4096"},
         {"op_threads_num","64"},
         {"engine_type","simple"},
+        {"replica_size","0"},
+        {"min_replica_size","0"},
+        {"commit_log_max_size", "499322"}
       };
       //scan global section, overwrite default config
       std::string s;

@@ -51,14 +51,16 @@ public:
    * Returns true if the callback was cancelled.
    * Returns false if you never addded the callback in the first place.
    */
-  bool cancel_event(Context *callback){
+  bool cancel_event(Context *callback, bool delete_event = true){
     std::lock_guard<std::mutex> guard(map_lock);
      event_lookup_map_t::iterator event_it = events.find(callback);
     if (event_it == events.end()) {
       return false;
     }
   
-    delete event_it->first;
+    if (delete_event) {
+      delete (Context*)event_it->first;
+    }
   
     schedule.erase(event_it->second);
     events.erase(event_it);
@@ -89,7 +91,7 @@ private:
       for (scheduled_map_t::iterator p = schedule.begin(); p != schedule.end();) {
         scheduled_map_t::iterator tmp = p++;
         if (tmp->first <= now_l) {
-          Context *callback = tmp->second;
+          Context *callback = (Context*)tmp->second;
           event_list.emplace_back(callback);
           event_lookup_map_t::iterator event_it = events.find(callback);
           if (event_it != events.end()) {
@@ -100,7 +102,7 @@ private:
       }
 
       for (auto &cur_event : event_list) {
-        cur_event->complete(0);
+        cur_event->complete(-2);
       }
   
       if (schedule.empty()) {
@@ -145,7 +147,7 @@ private:
     std::lock_guard<std::mutex> guard(map_lock);
     while (!events.empty()) {
       auto p = events.begin();
-      delete p->first;
+      delete (Context*)p->first;
       schedule.erase(p->second);
       events.erase(p);
     }

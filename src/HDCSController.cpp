@@ -1,5 +1,6 @@
 // Copyright [2017] <Intel>
 #include "HDCSController.h"
+#include "core/HDCSCoreStatMachine.h"
 
 namespace hdcs {
 HDCSController::HDCSController(
@@ -70,12 +71,14 @@ void HDCSController::handle_request(void* session_id, std::string msg_content) {
     {
       std::string volume_name(data, io_ctx->length);
 
+      std::cout << "start to look for core id in hdcs_core_map" << std::endl;
       hdcs_core_map_mutex.lock();
       auto it = hdcs_core_map.find(volume_name);
       if (it == hdcs_core_map.end()) {
         //get replication_options from HDCSManager
         std::vector<std::string> replication_nodes;
         bool first = true;
+        //get replication nodes from ha_client
         for (auto &host_name : ha_client->get_domain_item()) {
           if (first) {
             first = false;
@@ -87,13 +90,28 @@ void HDCSController::handle_request(void* session_id, std::string msg_content) {
           }
         }
         hdcs_repl_options replication_options(role, std::move(replication_nodes));
-        core::HDCSCore* core_inst = new core::HDCSCore(name, volume_name, config_file_path, std::move(replication_options));
-        auto ret = hdcs_core_map.insert(std::pair<std::string, core::HDCSCore*>(volume_name, core_inst));
+
+        //core::HDCSCore* core_inst = new core::HDCSCore(name, volume_name, config_file_path, std::move(replication_options));
+        // insert new core_stat_machine. This only happens to a clean volume.
+        core::HDCSCoreStatGuard *core_statmachine_inst = new core::HDCSCoreStatGuard(
+          name, volume_name, config_file_path, std::move(replication_options)
+        );
+        auto ret = hdcs_core_map.insert(
+          std::pair<std::string, core::HDCSCoreStatGuard*>(volume_name, core_statmachine_inst)
+        );
         assert (ret.second);
         it = ret.first;
       }
       hdcs_core_map_mutex.unlock();
-      hdcs_inst = it->second;
+      std::cout << "Found core id in hdcs_core_map" << std::endl;
+      
+      // Now we can get hdcs core inst from core stat machine.
+      hdcs_inst = it->second->get_hdcs_core();
+      if (hdcs_inst == nullptr) {
+        std::cout << "got core id from stat machine, but which is null" << std::endl;
+      } else {
+        std::cout << "got core id from stat machine" << std::endl;
+      }
       io_ctx->type = HDCS_CONNECT_REPLY;
       io_ctx->hdcs_inst = (void*)hdcs_inst;
       io_ctx->length = 0;
